@@ -11,6 +11,15 @@ A simple notepad for keeping track of tasks, styled like a legal pad. It's one H
 - Follows your system's light or dark theme
 - Export your tasks to a JSON file and import them back (handy for backups or moving to another device)
 
+## Install it as an app
+
+The notepad is an installable web app: it gets its own icon, opens full screen, and works offline.
+
+1. Open https://georgemampilli.github.io/GeorgeMampilli/ in Chrome.
+2. Tap the **⋮** menu, then **Add to home screen** → **Install** (on a computer, click the install icon in the address bar).
+
+Installed, it keeps tasks on that device. Use **Export** now and then to back them up.
+
 ## Where data is stored
 
 Opened as a file, the notepad saves tasks in your browser's `localStorage`, so they stay on that browser and device. Use **Export** to back them up.
