@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Task Notepad</title>
+<style>
+  :root {
+    --bg: #f6f4ef; --paper: #fffdf8; --ink: #2b2a27; --muted: #85817a;
+    --line: #e6e1d6; --accent: #3d6fd8; --danger: #c8443b;
+    --high: #c8443b; --med: #d08a1e; --low: #3b9a5d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1b1b1d; --paper: #242427; --ink: #ecebe8; --muted: #9a978f;
+      --line: #36363a; --accent: #7aa2ff; --danger: #ff7a70;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1b1b1d; --paper: #242427; --ink: #ecebe8; --muted: #9a978f;
+    --line: #36363a; --accent: #7aa2ff; --danger: #ff7a70;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .stats { color: var(--muted); font-size: 13px; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button {
+    background: none; border: 1px solid var(--line); border-radius: 8px;
+    padding: 6px 12px; cursor: pointer;
+  }
+  button:hover { border-color: var(--muted); }
+  .primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  form.add { margin: 18px 0; display: grid; gap: 8px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row > * { min-width: 0; }
+  input[type=text], input[type=date], input[type=search], select, textarea {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  #title { flex: 1 1 260px; }
+  textarea { width: 100%; resize: vertical; min-height: 38px; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .toolbar input[type=search] { flex: 1 1 180px; }
+  .tabs button[aria-pressed=true] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  li.task { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; }
+  li.task.done .t-title { text-decoration: line-through; color: var(--muted); }
+  .check { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); cursor: pointer; }
+  .t-title { font-weight: 600; word-break: break-word; }
+  .t-notes { color: var(--muted); white-space: pre-wrap; word-break: break-word; margin-top: 2px; }
+  .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; font-size: 12px; color: var(--muted); }
+  .pill { border-radius: 999px; padding: 1px 8px; border: 1px solid currentColor; }
+  .p-high { color: var(--high); } .p-medium { color: var(--med); } .p-low { color: var(--low); }
+  .overdue { color: var(--danger); font-weight: 600; }
+  .actions { display: flex; gap: 4px; }
+  .actions button { padding: 4px 8px; font-size: 13px; }
+  .del:hover { color: var(--danger); border-color: var(--danger); }
+  .empty { text-align: center; color: var(--muted); padding: 32px 0; }
+  footer { margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .edit-grid { display: grid; gap: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Task Notepad</h1>
+      <div class="stats" id="stats"></div>
+    </div>
+    <button id="theme" title="Toggle theme">◐</button>
+  </header>
+
+  <form class="add card" id="addForm">
+    <div class="row">
+      <input type="text" id="title" placeholder="What needs doing?" required autocomplete="off">
+      <select id="priority" aria-label="Priority">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+      </select>
+      <input type="date" id="due" aria-label="Due date">
+      <button class="primary" type="submit">Add</button>
+    </div>
+    <textarea id="notes" placeholder="Notes (optional)" rows="2"></textarea>
+  </form>
+
+  <div class="toolbar">
+    <div class="tabs row" role="group" aria-label="Filter">
+      <button data-filter="all" aria-pressed="true">All</button>
+      <button data-filter="active" aria-pressed="false">Active</button>
+      <button data-filter="done" aria-pressed="false">Done</button>
+    </div>
+    <input type="search" id="search" placeholder="Search tasks…">
+    <select id="sort" aria-label="Sort">
+      <option value="created">Newest first</option>
+      <option value="due">Due date</option>
+      <option value="priority">Priority</option>
+    </select>
+  </div>
+
+  <ul id="list"></ul>
+
+  <footer>
+    <button id="clearDone">Clear completed</button>
+    <button id="export">Export</button>
+    <button id="import">Import</button>
+    <input type="file" id="importFile" accept="application/json" hidden>
+  </footer>
+</main>
+
+<script>
+const KEY = 'task-notepad.v1';
+const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
+let tasks = load();
+let filter = 'all';
+let editingId = null;
+
+const $ = (sel) => document.querySelector(sel);
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(tasks)); } catch {}
+}
+function today() {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+function fmtDate(iso) {
+  return new Date(iso + 'T00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function esc(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function visibleTasks() {
+  const q = $('#search').value.trim().toLowerCase();
+  const sort = $('#sort').value;
+  return tasks
+    .filter((t) => filter === 'all' || (filter === 'done') === t.done)
+    .filter((t) => !q || (t.title + ' ' + t.notes).toLowerCase().includes(q))
+    .sort((a, b) => {
+      if (sort === 'due') return (a.due || '9999') .localeCompare(b.due || '9999');
+      if (sort === 'priority') return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+      return b.created - a.created;
+    });
+}
+
+function render() {
+  const active = tasks.filter((t) => !t.done).length;
+  const overdue = tasks.filter((t) => !t.done && t.due && t.due < today()).length;
+  $('#stats').textContent =
+    `${active} active · ${tasks.length - active} done` + (overdue ? ` · ${overdue} overdue` : '');
+
+  const list = $('#list');
+  const items = visibleTasks();
+  if (!items.length) {
+    list.innerHTML = `<li class="empty">${tasks.length ? 'No tasks match.' : 'No tasks yet — add one above.'}</li>`;
+    return;
+  }
+  list.innerHTML = items.map((t) => t.id === editingId ? editView(t) : taskView(t)).join('');
+}
+
+function taskView(t) {
+  const isOverdue = !t.done && t.due && t.due < today();
+  return `
+    <li class="task card ${t.done ? 'done' : ''}" data-id="${t.id}">
+      <input type="checkbox" class="check" ${t.done ? 'checked' : ''} aria-label="Mark done">
+      <div>
+        <div class="t-title">${esc(t.title)}</div>
+        ${t.notes ? `<div class="t-notes">${esc(t.notes)}</div>` : ''}
+        <div class="meta">
+          <span class="pill p-${t.priority}">${t.priority}</span>
+          ${t.due ? `<span class="${isOverdue ? 'overdue' : ''}">Due ${fmtDate(t.due)}${isOverdue ? ' (overdue)' : ''}</span>` : ''}
+        </div>
+      </div>
+      <div class="actions">
+        <button class="edit" title="Edit">Edit</button>
+        <button class="del" title="Delete">✕</button>
+      </div>
+    </li>`;
+}
+
+function editView(t) {
+  const opt = (v) => `<option value="${v}" ${t.priority === v ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)}</option>`;
+  return `
+    <li class="card" data-id="${t.id}">
+      <form class="edit-grid edit-form">
+        <input type="text" name="title" value="${esc(t.title)}" required>
+        <div class="row">
+          <select name="priority">${opt('low')}${opt('medium')}${opt('high')}</select>
+          <input type="date" name="due" value="${t.due || ''}">
+        </div>
+        <textarea name="notes" rows="3">${esc(t.notes)}</textarea>
+        <div class="row">
+          <button class="primary" type="submit">Save</button>
+          <button type="button" class="cancel">Cancel</button>
+        </div>
+      </form>
+    </li>`;
+}
+
+$('#addForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const title = $('#title').value.trim();
+  if (!title) return;
+  tasks.push({
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+    title, notes: $('#notes').value.trim(), priority: $('#priority').value,
+    due: $('#due').value || null, done: false, created: Date.now(),
+  });
+  save();
+  e.target.reset();
+  $('#title').focus();
+  render();
+});
+
+$('#list').addEventListener('click', (e) => {
+  const li = e.target.closest('[data-id]');
+  if (!li) return;
+  const t = tasks.find((x) => x.id === li.dataset.id);
+  if (e.target.classList.contains('check')) { t.done = e.target.checked; save(); render(); }
+  else if (e.target.classList.contains('del')) {
+    if (confirm(`Delete "${t.title}"?`)) { tasks = tasks.filter((x) => x !== t); save(); render(); }
+  }
+  else if (e.target.classList.contains('edit')) { editingId = t.id; render(); $('.edit-form input').focus(); }
+  else if (e.target.classList.contains('cancel')) { editingId = null; render(); }
+});
+
+$('#list').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const t = tasks.find((x) => x.id === f.closest('[data-id]').dataset.id);
+  Object.assign(t, {
+    title: f.title.value.trim() || t.title, notes: f.notes.value.trim(),
+    priority: f.priority.value, due: f.due.value || null,
+  });
+  editingId = null;
+  save();
+  render();
+});
+
+document.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => {
+  filter = b.dataset.filter;
+  document.querySelectorAll('[data-filter]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  render();
+}));
+$('#search').addEventListener('input', render);
+$('#sort').addEventListener('change', render);
+
+$('#clearDone').addEventListener('click', () => {
+  const n = tasks.filter((t) => t.done).length;
+  if (n && confirm(`Remove ${n} completed task${n > 1 ? 's' : ''}?`)) {
+    tasks = tasks.filter((t) => !t.done); save(); render();
+  }
+});
+
+$('#export').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `tasks-${today()}.json` });
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+$('#import').addEventListener('click', () => $('#importFile').click());
+$('#importFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!Array.isArray(data)) throw new Error();
+    const ids = new Set(tasks.map((t) => t.id));
+    tasks.push(...data.filter((t) => t && t.id && t.title && !ids.has(t.id)));
+    save(); render();
+  } catch { alert('That file is not a valid task export.'); }
+  e.target.value = '';
+});
+
+const root = document.documentElement;
+try { const th = localStorage.getItem(KEY + '.theme'); if (th) root.dataset.theme = th; } catch {}
+$('#theme').addEventListener('click', () => {
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+  try { localStorage.setItem(KEY + '.theme', root.dataset.theme); } catch {}
+});
+
+render();
+</script>
+</body>
+</html>
