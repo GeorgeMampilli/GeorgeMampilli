@@ -2,134 +2,211 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Task Notepad</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
+  body { margin: 0; }
+  [hidden] { display: none !important; }
+  /* Layout: a single legal-pad sheet — ruled rows, a red margin line, the add form pinned at the top of the sheet. */
   :root {
-    --bg: #f6f4ef; --paper: #fffdf8; --ink: #2b2a27; --muted: #85817a;
-    --line: #e6e1d6; --accent: #3d6fd8; --danger: #c8443b;
-    --high: #c8443b; --med: #d08a1e; --low: #3b9a5d;
+    --desk: #e9ecef;
+    --paper: #fbf8e9;
+    --rule: #c9d8ea;
+    --margin: #d9625a;
+    --ink: #1f2a37;
+    --muted: #64707d;
+    --accent: #2457c5;
+    --accent-ink: #ffffff;
+    --field: #ffffff;
+    --line: #d6d9d2;
+    --high: #c23a31;
+    --med: #b0700c;
+    --low: #2f8551;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #1b1b1d; --paper: #242427; --ink: #ecebe8; --muted: #9a978f;
-      --line: #36363a; --accent: #7aa2ff; --danger: #ff7a70;
+      --desk: #11151b; --paper: #1a2029; --rule: #263142; --margin: #9c4a45;
+      --ink: #e7ebf0; --muted: #94a0ae; --accent: #7ea3ff; --accent-ink: #0d1422;
+      --field: #222a35; --line: #313b49; --high: #ff8278; --med: #f0b24a; --low: #6fd093;
+      color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #1b1b1d; --paper: #242427; --ink: #ecebe8; --muted: #9a978f;
-    --line: #36363a; --accent: #7aa2ff; --danger: #ff7a70;
+    --desk: #11151b; --paper: #1a2029; --rule: #263142; --margin: #9c4a45;
+    --ink: #e7ebf0; --muted: #94a0ae; --accent: #7ea3ff; --accent-ink: #0d1422;
+    --field: #222a35; --line: #313b49; --high: #ff8278; --med: #f0b24a; --low: #6fd093;
+    color-scheme: dark;
   }
+
   * { box-sizing: border-box; }
   body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--desk); color: var(--ink);
+    font: 15px/1.5 var(--body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 24px 48px;
   }
-  main { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
-  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-  h1 { font-size: 26px; margin: 0 0 4px; }
-  .stats { color: var(--muted); font-size: 13px; }
   button, input, select, textarea { font: inherit; color: inherit; }
-  button {
-    background: none; border: 1px solid var(--line); border-radius: 8px;
-    padding: 6px 12px; cursor: pointer;
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .sheet {
+    max-width: 760px; margin: 0 auto;
+    background: var(--paper);
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .08), 0 8px 28px rgb(0 0 0 / .08);
+    position: relative; overflow: hidden;
   }
-  button:hover { border-color: var(--muted); }
-  .primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
-  form.add { margin: 18px 0; display: grid; gap: 8px; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sheet::before {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 44px;
+    border-left: 1.5px solid var(--margin); opacity: .7; pointer-events: none;
+  }
+  .inner { padding: 22px 20px 20px 60px; display: grid; gap: 18px; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  h1 {
+    font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.1;
+    letter-spacing: -.01em; margin: 0; text-wrap: balance;
+  }
+  .stats { display: flex; gap: 14px; font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stats b { color: var(--ink); font-weight: 500; }
+  .stats .od b { color: var(--high); }
+  .sync { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  form.add { display: grid; gap: 8px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .row > * { min-width: 0; }
   input[type=text], input[type=date], input[type=search], select, textarea {
-    background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+    background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
   }
-  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-  #title { flex: 1 1 260px; }
-  textarea { width: 100%; resize: vertical; min-height: 38px; }
-  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-  .toolbar input[type=search] { flex: 1 1 180px; }
-  .tabs button[aria-pressed=true] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-  li.task { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; }
-  li.task.done .t-title { text-decoration: line-through; color: var(--muted); }
-  .check { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); cursor: pointer; }
-  .t-title { font-weight: 600; word-break: break-word; }
-  .t-notes { color: var(--muted); white-space: pre-wrap; word-break: break-word; margin-top: 2px; }
-  .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; font-size: 12px; color: var(--muted); }
-  .pill { border-radius: 999px; padding: 1px 8px; border: 1px solid currentColor; }
+  #newTitle { flex: 1 1 240px; }
+  textarea { width: 100%; resize: vertical; min-height: 40px; }
+  button {
+    background: transparent; border: 1px solid var(--line); border-radius: 6px;
+    padding: 7px 12px; cursor: pointer; line-height: 1.2;
+  }
+  button:hover { border-color: var(--muted); }
+  .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .primary:hover { border-color: var(--accent); filter: brightness(1.06); }
+  .danger { color: var(--high); border-color: currentColor; }
+
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .toolbar input[type=search] { flex: 1 1 160px; }
+  .tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .tabs button { border: 0; border-radius: 0; padding: 7px 12px; }
+  .tabs button + button { border-left: 1px solid var(--line); }
+  .tabs button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+  li.task {
+    display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: start;
+    padding: 12px 0; border-bottom: 1px solid var(--rule);
+  }
+  li.task:first-child { border-top: 1px solid var(--rule); }
+  .check { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
+  .t-body { min-width: 0; }
+  .t-title { font-weight: 600; overflow-wrap: anywhere; }
+  li.done .t-title { text-decoration: line-through; color: var(--muted); font-weight: 500; }
+  .t-notes { color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }
+  .meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .pill {
+    font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+    border: 1px solid currentColor; border-radius: 999px; padding: 0 7px;
+  }
   .p-high { color: var(--high); } .p-medium { color: var(--med); } .p-low { color: var(--low); }
-  .overdue { color: var(--danger); font-weight: 600; }
-  .actions { display: flex; gap: 4px; }
-  .actions button { padding: 4px 8px; font-size: 13px; }
-  .del:hover { color: var(--danger); border-color: var(--danger); }
-  .empty { text-align: center; color: var(--muted); padding: 32px 0; }
-  footer { margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-  .edit-grid { display: grid; gap: 8px; }
+  .due { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .overdue { color: var(--high); font-weight: 500; }
+  .actions { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  .actions button { padding: 4px 9px; font-size: 13px; }
+
+  .edit { padding: 12px 0; border-bottom: 1px solid var(--rule); display: grid; gap: 8px; }
+  .empty { padding: 28px 0; color: var(--muted); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .empty strong { color: var(--ink); display: block; margin-bottom: 2px; }
+
+  footer { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+  .note { font-size: 13px; color: var(--muted); margin-right: auto; }
+  .note.err { color: var(--high); }
+
+  @media (max-width: 480px) {
+    .sheet::before { left: 22px; }
+    .inner { padding: 18px 14px 16px 34px; }
+    h1 { font-size: 26px; }
+    li.task { grid-template-columns: 22px 1fr; }
+    .actions { grid-column: 2; justify-content: flex-start; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    li.task { transition: background-color .15s; }
+  }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <div>
-      <h1>Task Notepad</h1>
+<main class="sheet">
+  <div class="inner">
+    <header>
+      <div>
+        <h1>Task Notepad</h1>
+        <div class="sync" id="sync">Loading your tasks…</div>
+      </div>
       <div class="stats" id="stats"></div>
-    </div>
-    <button id="theme" title="Toggle theme">◐</button>
-  </header>
+    </header>
 
-  <form class="add card" id="addForm">
-    <div class="row">
-      <input type="text" id="title" placeholder="What needs doing?" required autocomplete="off">
-      <select id="priority" aria-label="Priority">
-        <option value="low">Low</option>
-        <option value="medium" selected>Medium</option>
-        <option value="high">High</option>
+    <form class="add" id="addForm" autocomplete="off">
+      <div class="row">
+        <input type="text" id="newTitle" placeholder="What needs doing?" required aria-label="Task">
+        <select id="newPriority" aria-label="Priority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+        <input type="date" id="newDue" aria-label="Due date">
+        <button class="primary" type="submit">Add task</button>
+      </div>
+      <textarea id="newNotes" rows="2" placeholder="Notes (optional)" aria-label="Notes"></textarea>
+    </form>
+
+    <div class="toolbar">
+      <div class="tabs" role="group" aria-label="Show">
+        <button type="button" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-filter="active" aria-pressed="false">Active</button>
+        <button type="button" data-filter="done" aria-pressed="false">Done</button>
+      </div>
+      <input type="search" id="search" placeholder="Search tasks" aria-label="Search tasks">
+      <select id="sort" aria-label="Sort">
+        <option value="created">Newest first</option>
+        <option value="due">Due date</option>
+        <option value="priority">Priority</option>
       </select>
-      <input type="date" id="due" aria-label="Due date">
-      <button class="primary" type="submit">Add</button>
     </div>
-    <textarea id="notes" placeholder="Notes (optional)" rows="2"></textarea>
-  </form>
 
-  <div class="toolbar">
-    <div class="tabs row" role="group" aria-label="Filter">
-      <button data-filter="all" aria-pressed="true">All</button>
-      <button data-filter="active" aria-pressed="false">Active</button>
-      <button data-filter="done" aria-pressed="false">Done</button>
-    </div>
-    <input type="search" id="search" placeholder="Search tasks…">
-    <select id="sort" aria-label="Sort">
-      <option value="created">Newest first</option>
-      <option value="due">Due date</option>
-      <option value="priority">Priority</option>
-    </select>
+    <ul id="list"></ul>
+
+    <footer>
+      <span class="note" id="note" role="status"></span>
+      <span id="clearWrap"><button type="button" id="clearDone">Clear completed</button></span>
+      <button type="button" id="exportBtn" hidden>Export</button>
+      <button type="button" id="importBtn">Import</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </footer>
   </div>
-
-  <ul id="list"></ul>
-
-  <footer>
-    <button id="clearDone">Clear completed</button>
-    <button id="export">Export</button>
-    <button id="import">Import</button>
-    <input type="file" id="importFile" accept="application/json" hidden>
-  </footer>
 </main>
 
 <script>
-const KEY = 'task-notepad.v1';
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
-let tasks = load();
+const LOCAL_KEY = 'task-notepad.v1';
+const $ = (s) => document.querySelector(s);
+
+let tasks = [];
 let filter = 'all';
 let editingId = null;
+let confirmingId = null;
+let store = null;
 
-const $ = (sel) => document.querySelector(sel);
-
-function load() {
-  try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; }
-}
-function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(tasks)); } catch {}
-}
 function today() {
   const d = new Date();
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -138,160 +215,281 @@ function fmtDate(iso) {
   return new Date(iso + 'T00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 function esc(s) {
-  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function newId() {
+  return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+function clean(t) {
+  return {
+    title: String(t.title || '').slice(0, 500),
+    notes: String(t.notes || '').slice(0, 5000),
+    priority: PRIORITY_RANK[t.priority] !== undefined ? t.priority : 'medium',
+    due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || '') ? t.due : null,
+    done: !!t.done,
+    created: Number(t.created) || Date.now(),
+  };
+}
+function say(msg, err) {
+  const n = $('#note');
+  n.textContent = msg || '';
+  n.classList.toggle('err', !!err);
 }
 
-function visibleTasks() {
+/* ---------- storage: your claude.ai account, or this browser as a fallback ---------- */
+
+function accountStore(db, uid) {
+  const col = db.collection('data/users/' + uid);
+  const queues = {};
+  // One write at a time per task.
+  const queued = (id, fn) => (queues[id] = (queues[id] || Promise.resolve()).then(fn, fn));
+  return {
+    label: 'Saved to your claude.ai account — open this page on any device to see the same list.',
+    subscribe(cb, onErr) {
+      return col.onSnapshot(
+        (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+        onErr,
+      );
+    },
+    put: (id, t) => queued(id, () => col.doc(id).set(t)),
+    patch: (id, p) => queued(id, () => col.doc(id).update(p)),
+    remove: (id) => queued(id, () => col.doc(id).delete()),
+  };
+}
+
+function browserStore() {
+  let data = {};
+  let listener = () => {};
+  try { data = JSON.parse(localStorage.getItem(LOCAL_KEY)) || {}; } catch {}
+  // Earlier versions kept a plain list of tasks; key them by id.
+  if (Array.isArray(data)) data = Object.fromEntries(data.filter((t) => t && t.title).map((t) => [t.id || newId(), t]));
+  const flush = () => {
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(data)); } catch {}
+    listener(Object.entries(data).map(([id, t]) => ({ id, ...t })));
+  };
+  return {
+    label: window.claude
+      ? 'Saved in this browser only. Sign in to claude.ai to keep tasks across devices.'
+      : 'Saved in this browser only. Use Export to back up or move your tasks.',
+    subscribe(cb) { listener = cb; flush(); return () => {}; },
+    put: async (id, t) => { data[id] = t; flush(); },
+    patch: async (id, p) => { if (data[id]) { Object.assign(data[id], p); flush(); } },
+    remove: async (id) => { delete data[id]; flush(); },
+  };
+}
+
+async function write(promise, what) {
+  try { await promise; }
+  catch (e) {
+    const code = e && e.code;
+    if (code === 'quota_exceeded') say('Your task list is full. Delete some completed tasks to add more.', true);
+    else if (code === 'invalid_argument') say(`Couldn't ${what}. You may only have view access to this page.`, true);
+    else say(`Couldn't ${what}. Check your connection and try again.`, true);
+  }
+}
+
+/* ---------- rendering ---------- */
+
+function visible() {
   const q = $('#search').value.trim().toLowerCase();
   const sort = $('#sort').value;
   return tasks
     .filter((t) => filter === 'all' || (filter === 'done') === t.done)
     .filter((t) => !q || (t.title + ' ' + t.notes).toLowerCase().includes(q))
     .sort((a, b) => {
-      if (sort === 'due') return (a.due || '9999') .localeCompare(b.due || '9999');
-      if (sort === 'priority') return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+      if (sort === 'due') return (a.due || '9999-99-99').localeCompare(b.due || '9999-99-99') || b.created - a.created;
+      if (sort === 'priority') return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || b.created - a.created;
       return b.created - a.created;
     });
 }
 
 function render() {
+  const t0 = today();
   const active = tasks.filter((t) => !t.done).length;
-  const overdue = tasks.filter((t) => !t.done && t.due && t.due < today()).length;
-  $('#stats').textContent =
-    `${active} active · ${tasks.length - active} done` + (overdue ? ` · ${overdue} overdue` : '');
+  const overdue = tasks.filter((t) => !t.done && t.due && t.due < t0).length;
+  $('#stats').innerHTML =
+    `<span><b>${active}</b> active</span><span><b>${tasks.length - active}</b> done</span>` +
+    (overdue ? `<span class="od"><b>${overdue}</b> overdue</span>` : '');
 
+  const doneCount = tasks.length - active;
+  $('#clearWrap').innerHTML = confirmingId === '__clear'
+    ? `Remove ${doneCount} completed? <button type="button" class="danger" data-act="clear-yes">Remove</button> <button type="button" data-act="clear-no">Keep</button>`
+    : `<button type="button" id="clearDone" data-act="clear" ${doneCount ? '' : 'disabled'}>Clear completed</button>`;
+
+  const items = visible();
   const list = $('#list');
-  const items = visibleTasks();
   if (!items.length) {
-    list.innerHTML = `<li class="empty">${tasks.length ? 'No tasks match.' : 'No tasks yet — add one above.'}</li>`;
+    list.innerHTML = tasks.length
+      ? `<li class="empty"><strong>Nothing matches.</strong>Try another filter or search.</li>`
+      : `<li class="empty"><strong>No tasks yet.</strong>Type one in the box above and press Add task. Give it a due date and it will turn red once it's overdue.</li>`;
     return;
   }
-  list.innerHTML = items.map((t) => t.id === editingId ? editView(t) : taskView(t)).join('');
+  list.innerHTML = items.map((t) => (t.id === editingId ? editView(t) : taskView(t, t0))).join('');
 }
 
-function taskView(t) {
-  const isOverdue = !t.done && t.due && t.due < today();
+function taskView(t, t0) {
+  const late = !t.done && t.due && t.due < t0;
+  const actions = confirmingId === t.id
+    ? `<button type="button" class="danger" data-act="del-yes">Delete</button><button type="button" data-act="del-no">Keep</button>`
+    : `<button type="button" data-act="edit">Edit</button><button type="button" data-act="del" aria-label="Delete task">Delete</button>`;
   return `
-    <li class="task card ${t.done ? 'done' : ''}" data-id="${t.id}">
-      <input type="checkbox" class="check" ${t.done ? 'checked' : ''} aria-label="Mark done">
-      <div>
+    <li class="task ${t.done ? 'done' : ''}" data-id="${esc(t.id)}">
+      <input type="checkbox" class="check" data-act="toggle" ${t.done ? 'checked' : ''} aria-label="Mark ${esc(t.title)} done">
+      <div class="t-body">
         <div class="t-title">${esc(t.title)}</div>
         ${t.notes ? `<div class="t-notes">${esc(t.notes)}</div>` : ''}
         <div class="meta">
           <span class="pill p-${t.priority}">${t.priority}</span>
-          ${t.due ? `<span class="${isOverdue ? 'overdue' : ''}">Due ${fmtDate(t.due)}${isOverdue ? ' (overdue)' : ''}</span>` : ''}
+          ${t.due ? `<span class="due ${late ? 'overdue' : ''}">Due ${fmtDate(t.due)}${late ? ' · overdue' : ''}</span>` : ''}
         </div>
       </div>
-      <div class="actions">
-        <button class="edit" title="Edit">Edit</button>
-        <button class="del" title="Delete">✕</button>
-      </div>
+      <div class="actions">${actions}</div>
     </li>`;
 }
 
 function editView(t) {
   const opt = (v) => `<option value="${v}" ${t.priority === v ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)}</option>`;
   return `
-    <li class="card" data-id="${t.id}">
-      <form class="edit-grid edit-form">
-        <input type="text" name="title" value="${esc(t.title)}" required>
+    <li data-id="${esc(t.id)}">
+      <form class="edit" id="editForm">
+        <input type="text" id="editTitle" name="title" value="${esc(t.title)}" required aria-label="Task">
         <div class="row">
-          <select name="priority">${opt('low')}${opt('medium')}${opt('high')}</select>
-          <input type="date" name="due" value="${t.due || ''}">
+          <select id="editPriority" name="priority" aria-label="Priority">${opt('low')}${opt('medium')}${opt('high')}</select>
+          <input type="date" id="editDue" name="due" value="${t.due || ''}" aria-label="Due date">
         </div>
-        <textarea name="notes" rows="3">${esc(t.notes)}</textarea>
+        <textarea id="editNotes" name="notes" rows="3" aria-label="Notes">${esc(t.notes)}</textarea>
         <div class="row">
           <button class="primary" type="submit">Save</button>
-          <button type="button" class="cancel">Cancel</button>
+          <button type="button" data-act="cancel">Cancel</button>
         </div>
       </form>
     </li>`;
 }
 
+/* ---------- interactions ---------- */
+
 $('#addForm').addEventListener('submit', (e) => {
   e.preventDefault();
-  const title = $('#title').value.trim();
-  if (!title) return;
-  tasks.push({
-    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-    title, notes: $('#notes').value.trim(), priority: $('#priority').value,
-    due: $('#due').value || null, done: false, created: Date.now(),
+  const title = $('#newTitle').value.trim();
+  if (!title || !store) return;
+  const t = clean({
+    title, notes: $('#newNotes').value.trim(), priority: $('#newPriority').value,
+    due: $('#newDue').value, done: false, created: Date.now(),
   });
-  save();
   e.target.reset();
-  $('#title').focus();
-  render();
+  $('#newTitle').focus();
+  say('');
+  write(store.put(newId(), t), 'add that task');
 });
 
-$('#list').addEventListener('click', (e) => {
+document.addEventListener('click', (e) => {
+  const act = e.target.dataset && e.target.dataset.act;
+  if (!act) return;
   const li = e.target.closest('[data-id]');
-  if (!li) return;
-  const t = tasks.find((x) => x.id === li.dataset.id);
-  if (e.target.classList.contains('check')) { t.done = e.target.checked; save(); render(); }
-  else if (e.target.classList.contains('del')) {
-    if (confirm(`Delete "${t.title}"?`)) { tasks = tasks.filter((x) => x !== t); save(); render(); }
+  const t = li && tasks.find((x) => x.id === li.dataset.id);
+  switch (act) {
+    case 'toggle': write(store.patch(t.id, { done: e.target.checked }), 'update that task'); break;
+    case 'edit': editingId = t.id; confirmingId = null; render(); $('#editTitle').focus(); break;
+    case 'cancel': editingId = null; render(); break;
+    case 'del': confirmingId = t.id; render(); break;
+    case 'del-no': confirmingId = null; render(); break;
+    case 'del-yes': confirmingId = null; write(store.remove(t.id), 'delete that task'); break;
+    case 'clear': confirmingId = '__clear'; render(); break;
+    case 'clear-no': confirmingId = null; render(); break;
+    case 'clear-yes':
+      confirmingId = null;
+      tasks.filter((x) => x.done).forEach((x) => write(store.remove(x.id), 'clear completed tasks'));
+      render();
+      break;
   }
-  else if (e.target.classList.contains('edit')) { editingId = t.id; render(); $('.edit-form input').focus(); }
-  else if (e.target.classList.contains('cancel')) { editingId = null; render(); }
 });
 
 $('#list').addEventListener('submit', (e) => {
   e.preventDefault();
   const f = e.target;
-  const t = tasks.find((x) => x.id === f.closest('[data-id]').dataset.id);
-  Object.assign(t, {
+  const t = tasks.find((x) => x.id === editingId);
+  if (!t) return;
+  const patch = {
     title: f.title.value.trim() || t.title, notes: f.notes.value.trim(),
     priority: f.priority.value, due: f.due.value || null,
-  });
+  };
   editingId = null;
-  save();
   render();
+  write(store.patch(t.id, patch), 'save your changes');
 });
 
 document.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => {
   filter = b.dataset.filter;
-  document.querySelectorAll('[data-filter]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  document.querySelectorAll('[data-filter]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
   render();
 }));
 $('#search').addEventListener('input', render);
 $('#sort').addEventListener('change', render);
 
-$('#clearDone').addEventListener('click', () => {
-  const n = tasks.filter((t) => t.done).length;
-  if (n && confirm(`Remove ${n} completed task${n > 1 ? 's' : ''}?`)) {
-    tasks = tasks.filter((t) => !t.done); save(); render();
+$('#importBtn').addEventListener('click', () => $('#importFile').click());
+$('#importFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file || !store) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!Array.isArray(data)) throw new Error('not a list');
+    const have = new Set(tasks.map((t) => t.id));
+    const fresh = data.filter((t) => t && t.title && !have.has(t.id));
+    for (const t of fresh) {
+      const id = typeof t.id === 'string' && /^[A-Za-z0-9_.~:@+-]{1,100}$/.test(t.id) && t.id !== '.' && t.id !== '..' ? t.id : newId();
+      await write(store.put(id, clean(t)), 'import tasks');
+    }
+    say(fresh.length ? `Imported ${fresh.length} task${fresh.length > 1 ? 's' : ''}.` : 'Those tasks are already in your list.');
+  } catch {
+    say('That file isn\'t a Task Notepad export. Choose a .json file made with Export.', true);
   }
 });
 
-$('#export').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
-  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `tasks-${today()}.json` });
-  a.click();
-  URL.revokeObjectURL(a.href);
-});
-$('#import').addEventListener('click', () => $('#importFile').click());
-$('#importFile').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    const data = JSON.parse(await file.text());
-    if (!Array.isArray(data)) throw new Error();
-    const ids = new Set(tasks.map((t) => t.id));
-    tasks.push(...data.filter((t) => t && t.id && t.title && !ids.has(t.id)));
-    save(); render();
-  } catch { alert('That file is not a valid task export.'); }
-  e.target.value = '';
-});
+/* ---------- start ---------- */
 
-const root = document.documentElement;
-try { const th = localStorage.getItem(KEY + '.theme'); if (th) root.dataset.theme = th; } catch {}
-$('#theme').addEventListener('click', () => {
-  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-  root.dataset.theme = dark ? 'light' : 'dark';
-  try { localStorage.setItem(KEY + '.theme', root.dataset.theme); } catch {}
-});
+function start(s) {
+  store = s;
+  $('#sync').textContent = s.label;
+  s.subscribe(
+    (rows) => {
+      tasks = rows.map((r) => ({ id: r.id, ...clean(r) }));
+      if (editingId && !tasks.some((t) => t.id === editingId)) editingId = null;
+      render();
+    },
+    () => say('Lost the connection to your saved tasks. Reload the page to reconnect.', true),
+  );
+}
 
 render();
+(async () => {
+  const cl = window.claude;
+  const [db, user, downloads] = cl && cl.use
+    ? await Promise.all([cl.use('db'), cl.use('user'), cl.use('downloads')])
+    : [null, null, null];
+  const uid = user ? await user.id() : null;
+  start(db && uid ? accountStore(db, uid) : browserStore());
+
+  // On claude.ai, saves go through the downloads capability; opened as a plain file, a normal download works.
+  if (downloads || !cl) {
+    const btn = $('#exportBtn');
+    btn.hidden = false;
+    btn.addEventListener('click', async () => {
+      const data = tasks.map(({ id, title, notes, priority, due, done, created }) => ({ id, title, notes, priority, due, done, created }));
+      const filename = `tasks-${today()}.json`;
+      const json = JSON.stringify(data, null, 2);
+      if (downloads) {
+        try { await downloads.save({ filename, data: json }); } catch { /* the viewer declined the save */ }
+        return;
+      }
+      const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(new Blob([json], { type: 'application/json' })), download: filename,
+      });
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  }
+})();
 </script>
 </body>
 </html>
