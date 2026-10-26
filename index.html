@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#fbf8e9" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1a2029" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#6c1d22">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon-64.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -12,43 +11,42 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Oswald:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   body { margin: 0; }
   [hidden] { display: none !important; }
-  /* Layout: a single legal-pad sheet — ruled rows, a red margin line, the add form pinned at the top of the sheet. */
+  /* Layout: one yellow legal pad on a desk — glued oxblood binding with a perforation, blank head space,
+     a double red top rule, then blue-ruled lines with a double red margin. Tasks are written in blue ballpoint.
+     The pad itself is a physical object and stays yellow in both themes; only the desk around it changes. */
   :root {
-    --desk: #e9ecef;
-    --paper: #fbf8e9;
-    --rule: #c9d8ea;
-    --margin: #d9625a;
-    --ink: #1f2a37;
-    --muted: #64707d;
-    --accent: #2457c5;
-    --accent-ink: #ffffff;
-    --field: #ffffff;
-    --line: #d6d9d2;
-    --high: #c23a31;
-    --med: #b0700c;
-    --low: #2f8551;
-    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --desk: #d8dce1;
+    --paper: #fcf18f;
+    --paper-under: #efe27a;
+    --paper-under-2: #e2d46c;
+    --rule: #8eb2d6;
+    --margin: #e0544c;
+    --binding: #6c1d22;
+    --binding-dark: #531418;
+    --binding-ink: #f4dcae;
+    --ink: #222a33;
+    --pen: #1d3d9c;
+    --pencil: #5e5737;
+    --write-line: #b5a24a;
+    --high: #c1251c;
+    --med: #9c5600;
+    --low: #2a7339;
+    --hand: "Kalam", "Segoe Print", "Bradley Hand", cursive;
+    --print: "Oswald", "Arial Narrow", sans-serif;
     --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --line: 34px;
+    --gutter: 84px;
+    --margin-x: 66px;
   }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --desk: #11151b; --paper: #1a2029; --rule: #263142; --margin: #9c4a45;
-      --ink: #e7ebf0; --muted: #94a0ae; --accent: #7ea3ff; --accent-ink: #0d1422;
-      --field: #222a35; --line: #313b49; --high: #ff8278; --med: #f0b24a; --low: #6fd093;
-      color-scheme: dark;
-    }
+    :root:not([data-theme="light"]) { --desk: #16191e; --paper: #f4e886; --paper-under: #ddd06f; --paper-under-2: #c8bb5f; }
   }
-  :root[data-theme="dark"] {
-    --desk: #11151b; --paper: #1a2029; --rule: #263142; --margin: #9c4a45;
-    --ink: #e7ebf0; --muted: #94a0ae; --accent: #7ea3ff; --accent-ink: #0d1422;
-    --field: #222a35; --line: #313b49; --high: #ff8278; --med: #f0b24a; --low: #6fd093;
-    color-scheme: dark;
-  }
+  :root[data-theme="dark"] { --desk: #16191e; --paper: #f4e886; --paper-under: #ddd06f; --paper-under-2: #c8bb5f; }
 
   * { box-sizing: border-box; }
   body {
@@ -56,140 +54,203 @@
     font: 15px/1.5 var(--body);
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
-    padding-block: 24px 48px;
+    padding-block: 20px 48px;
   }
   button, input, select, textarea { font: inherit; color: inherit; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
 
-  .sheet {
-    max-width: 760px; margin: 0 auto;
+  /* ---------- the pad ---------- */
+  .pad {
+    max-width: 760px; margin: 0 auto 10px;
+    border-radius: 5px 5px 2px 2px;
     background: var(--paper);
-    border-radius: 6px;
-    box-shadow: 0 1px 2px rgb(0 0 0 / .08), 0 8px 28px rgb(0 0 0 / .08);
-    position: relative; overflow: hidden;
+    /* sheets underneath peeking out at the bottom */
+    box-shadow:
+      0 3px 0 -1px var(--paper-under),
+      0 6px 0 -2px var(--paper-under-2),
+      0 16px 32px rgb(0 0 0 / .22);
   }
-  .sheet::before {
-    content: ""; position: absolute; top: 0; bottom: 0; left: 44px;
-    border-left: 1.5px solid var(--margin); opacity: .7; pointer-events: none;
+  .binding {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 14px 20px 12px var(--gutter);
+    background: linear-gradient(var(--binding), var(--binding-dark));
+    border-radius: 5px 5px 0 0;
+    color: var(--binding-ink);
   }
-  .inner { padding: 22px 20px 20px 60px; display: grid; gap: 18px; }
-
-  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
   h1 {
-    font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.1;
-    letter-spacing: -.01em; margin: 0; text-wrap: balance;
+    margin: 0; font-family: var(--print); font-weight: 500;
+    font-size: 15px; letter-spacing: .24em; text-transform: uppercase;
   }
-  .stats { display: flex; gap: 14px; font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .stats b { color: var(--ink); font-weight: 500; }
-  .stats .od b { color: var(--high); }
-  .sync { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .stats { display: flex; gap: 14px; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; opacity: .92; }
+  .stats .od { color: #ffb3a8; }
 
-  form.add { display: grid; gap: 8px; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .sheet { position: relative; padding: 0 20px 18px var(--gutter); }
+  /* perforation under the binding */
+  .sheet::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 7px; height: 4px;
+    background: radial-gradient(circle, rgb(0 0 0 / .2) 1.3px, transparent 1.8px) 0 0 / 9px 4px repeat-x;
+  }
+  /* double red margin, running the full height of the sheet */
+  .sheet::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: var(--margin-x); width: 5px;
+    border-left: 1.5px solid var(--margin); border-right: 1.5px solid var(--margin);
+    opacity: .75; pointer-events: none;
+  }
+
+  .head { padding-top: 22px; display: grid; gap: 14px; }
+  .dateline { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .date { font-family: var(--hand); font-size: 22px; color: var(--pen); line-height: 1.2; }
+  .sync { font-size: 12px; color: var(--pencil); }
+
+  form.add { display: grid; gap: 10px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
   .row > * { min-width: 0; }
-  input[type=text], input[type=date], input[type=search], select, textarea {
-    background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+
+  /* inputs look like writing on a line rather than boxes */
+  .write, .field {
+    background: transparent; border: 0; border-bottom: 1.5px solid var(--write-line); border-radius: 0;
   }
-  #newTitle { flex: 1 1 240px; }
-  textarea { width: 100%; resize: vertical; min-height: 40px; }
+  .write:focus-visible, .field:focus-visible { outline: none; border-bottom: 2px solid var(--pen); }
+  .write {
+    font-family: var(--hand); font-size: 21px; color: var(--pen); padding: 2px 2px 0; line-height: 1.5;
+  }
+  .write::placeholder, textarea.write::placeholder { color: var(--pencil); opacity: .75; }
+  #newTitle { flex: 1 1 100%; }
+  textarea.write { width: 100%; resize: vertical; min-height: 40px; font-size: 18px; }
+  .field { padding: 6px 2px; font-size: 14px; }
+  .field option { color: #222; background: #fff; }
+
   button {
-    background: transparent; border: 1px solid var(--line); border-radius: 6px;
-    padding: 7px 12px; cursor: pointer; line-height: 1.2;
+    background: transparent; border: 1.5px solid var(--write-line); border-radius: 4px;
+    padding: 6px 12px; cursor: pointer; line-height: 1.2; font-size: 14px;
   }
-  button:hover { border-color: var(--muted); }
-  .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
-  .primary:hover { border-color: var(--accent); filter: brightness(1.06); }
-  .danger { color: var(--high); border-color: currentColor; }
+  button:hover:not(:disabled) { border-color: var(--ink); }
+  button:disabled { opacity: .5; cursor: default; }
+  .primary { background: var(--pen); border-color: var(--pen); color: #fff; font-weight: 600; padding: 8px 16px; }
+  .primary:hover:not(:disabled) { border-color: var(--pen); filter: brightness(1.12); }
+  .danger { color: var(--high); border-color: var(--high); font-weight: 600; }
 
-  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .toolbar input[type=search] { flex: 1 1 160px; }
-  .tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-  .tabs button { border: 0; border-radius: 0; padding: 7px 12px; }
-  .tabs button + button { border-left: 1px solid var(--line); }
-  .tabs button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
+  .toolbar { display: flex; gap: 12px 16px; flex-wrap: wrap; align-items: flex-end; padding-bottom: 14px; }
+  .toolbar .field[type=search] { flex: 1 1 150px; }
+  .tabs { display: inline-flex; gap: 14px; }
+  .tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 4px 0; color: var(--pencil); }
+  .tabs button[aria-pressed=true] { color: var(--pen); border-bottom-color: var(--pen); font-weight: 600; }
 
+  /* ---------- ruled area ---------- */
+  .ruled {
+    margin: 0 -20px 0 calc(-1 * var(--gutter));
+    border-top: 4px double var(--margin);
+  }
   ul { list-style: none; margin: 0; padding: 0; }
   li.task {
-    display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: start;
-    padding: 12px 0; border-bottom: 1px solid var(--rule);
+    display: grid; grid-template-columns: var(--gutter) 1fr auto; gap: 0 12px; align-items: start;
+    min-height: calc(var(--line) * 2);
+    padding: 8px 20px 8px 0; border-bottom: 1px solid var(--rule);
   }
-  li.task:first-child { border-top: 1px solid var(--rule); }
-  .check { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
+  .check {
+    appearance: none; -webkit-appearance: none; justify-self: center;
+    width: 24px; height: 24px; margin: 6px 0 0; cursor: pointer;
+    border: 2px solid var(--pen); border-radius: 3px; transform: rotate(-3deg);
+    background: transparent center / 26px no-repeat;
+  }
+  .check:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 13.5l5 5L21 4' fill='none' stroke='%231d3d9c' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
   .t-body { min-width: 0; }
-  .t-title { font-weight: 600; overflow-wrap: anywhere; }
-  li.done .t-title { text-decoration: line-through; color: var(--muted); font-weight: 500; }
-  .t-notes { color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }
-  .meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .t-title { font-family: var(--hand); font-size: 22px; line-height: 1.45; color: var(--pen); overflow-wrap: anywhere; }
+  li.done .t-title {
+    color: var(--pencil);
+    text-decoration: line-through; text-decoration-color: var(--margin); text-decoration-thickness: 2px;
+  }
+  .t-notes { font-family: var(--hand); font-size: 17px; line-height: 1.45; color: var(--pencil); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .meta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 4px; font-size: 12px; color: var(--pencil); }
   .pill {
-    font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
-    border: 1px solid currentColor; border-radius: 999px; padding: 0 7px;
+    font-family: var(--hand); font-weight: 700; font-size: 14px; line-height: 1.3;
+    border: 1.5px solid currentColor; border-radius: 50%; padding: 0 9px; transform: rotate(-2deg);
   }
   .p-high { color: var(--high); } .p-medium { color: var(--med); } .p-low { color: var(--low); }
   .due { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   .overdue { color: var(--high); font-weight: 500; }
-  .actions { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
-  .actions button { padding: 4px 9px; font-size: 13px; }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; padding-top: 4px; }
+  .actions button { padding: 3px 9px; font-size: 13px; }
 
-  .edit { padding: 12px 0; border-bottom: 1px solid var(--rule); display: grid; gap: 8px; }
-  .empty { padding: 28px 0; color: var(--muted); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
-  .empty strong { color: var(--ink); display: block; margin-bottom: 2px; }
-
-  footer { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
-  .note { font-size: 13px; color: var(--muted); margin-right: auto; }
-  .note.err { color: var(--high); }
-
-  @media (max-width: 480px) {
-    .sheet::before { left: 22px; }
-    .inner { padding: 18px 14px 16px 34px; }
-    h1 { font-size: 26px; }
-    li.task { grid-template-columns: 22px 1fr; }
-    .actions { grid-column: 2; justify-content: flex-start; }
+  li.edit-row { padding: 10px 20px 12px var(--gutter); border-bottom: 1px solid var(--rule); }
+  .edit { display: grid; gap: 10px; }
+  .empty {
+    padding: 0 20px 0 var(--gutter); min-height: calc(var(--line) * 2);
+    display: flex; flex-direction: column; justify-content: center;
+    font-family: var(--hand); font-size: 18px; color: var(--pencil); border-bottom: 1px solid var(--rule);
   }
-  @media (prefers-reduced-motion: no-preference) {
-    li.task { transition: background-color .15s; }
+  .empty strong { color: var(--pen); font-size: 21px; font-weight: 400; }
+
+  /* blank ruled lines below the last task */
+  .blank {
+    height: calc(var(--line) * 4);
+    background: repeating-linear-gradient(to bottom, transparent 0 calc(var(--line) - 1px), var(--rule) calc(var(--line) - 1px) var(--line));
+  }
+
+  footer { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; padding-top: 14px; }
+  .note { font-size: 13px; color: var(--pencil); margin-right: auto; }
+  .note.err { color: var(--high); font-weight: 500; }
+
+  @media (max-width: 520px) {
+    :root { --gutter: 52px; --margin-x: 40px; }
+    .binding { padding-left: var(--gutter); }
+    .sheet { padding-right: 14px; }
+    .ruled { margin-right: -14px; }
+    li.task { grid-template-columns: var(--gutter) 1fr; padding-right: 14px; }
+    .actions { grid-column: 2; justify-content: flex-start; }
+    li.edit-row, .empty { padding-right: 14px; }
+    .date { font-size: 20px; }
   }
 </style>
 </head>
 <body>
-<main class="sheet">
-  <div class="inner">
-    <header>
-      <div>
-        <h1>Task Notepad</h1>
+<main class="pad">
+  <div class="binding">
+    <h1>Task Notepad</h1>
+    <div class="stats" id="stats"></div>
+  </div>
+  <div class="sheet">
+    <div class="head">
+      <div class="dateline">
+        <div class="date" id="today"></div>
         <div class="sync" id="sync">Loading your tasks…</div>
       </div>
-      <div class="stats" id="stats"></div>
-    </header>
 
-    <form class="add" id="addForm" autocomplete="off">
-      <div class="row">
-        <input type="text" id="newTitle" placeholder="What needs doing?" required aria-label="Task">
-        <select id="newPriority" aria-label="Priority">
-          <option value="low">Low</option>
-          <option value="medium" selected>Medium</option>
-          <option value="high">High</option>
+      <form class="add" id="addForm" autocomplete="off">
+        <input type="text" class="write" id="newTitle" placeholder="What needs doing?" required aria-label="Task">
+        <textarea class="write" id="newNotes" rows="1" placeholder="Notes (optional)" aria-label="Notes"></textarea>
+        <div class="row">
+          <select class="field" id="newPriority" aria-label="Priority">
+            <option value="low">Low priority</option>
+            <option value="medium" selected>Medium priority</option>
+            <option value="high">High priority</option>
+          </select>
+          <input type="date" class="field" id="newDue" aria-label="Due date">
+          <button class="primary" type="submit">Add task</button>
+        </div>
+      </form>
+
+      <div class="toolbar">
+        <div class="tabs" role="group" aria-label="Show">
+          <button type="button" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" data-filter="active" aria-pressed="false">Active</button>
+          <button type="button" data-filter="done" aria-pressed="false">Done</button>
+        </div>
+        <input type="search" class="field" id="search" placeholder="Search tasks" aria-label="Search tasks">
+        <select class="field" id="sort" aria-label="Sort">
+          <option value="created">Newest first</option>
+          <option value="due">Due date</option>
+          <option value="priority">Priority</option>
         </select>
-        <input type="date" id="newDue" aria-label="Due date">
-        <button class="primary" type="submit">Add task</button>
       </div>
-      <textarea id="newNotes" rows="2" placeholder="Notes (optional)" aria-label="Notes"></textarea>
-    </form>
-
-    <div class="toolbar">
-      <div class="tabs" role="group" aria-label="Show">
-        <button type="button" data-filter="all" aria-pressed="true">All</button>
-        <button type="button" data-filter="active" aria-pressed="false">Active</button>
-        <button type="button" data-filter="done" aria-pressed="false">Done</button>
-      </div>
-      <input type="search" id="search" placeholder="Search tasks" aria-label="Search tasks">
-      <select id="sort" aria-label="Sort">
-        <option value="created">Newest first</option>
-        <option value="due">Due date</option>
-        <option value="priority">Priority</option>
-      </select>
     </div>
 
-    <ul id="list"></ul>
+    <div class="ruled">
+      <ul id="list"></ul>
+      <div class="blank" aria-hidden="true"></div>
+    </div>
 
     <footer>
       <span class="note" id="note" role="status"></span>
@@ -326,7 +387,7 @@ function render() {
   if (!items.length) {
     list.innerHTML = tasks.length
       ? `<li class="empty"><strong>Nothing matches.</strong>Try another filter or search.</li>`
-      : `<li class="empty"><strong>No tasks yet.</strong>Type one in the box above and press Add task. Give it a due date and it will turn red once it's overdue.</li>`;
+      : `<li class="empty"><strong>Nothing on the pad yet.</strong>Write a task above and press Add task.</li>`;
     return;
   }
   list.innerHTML = items.map((t) => (t.id === editingId ? editView(t) : taskView(t, t0))).join('');
@@ -353,16 +414,16 @@ function taskView(t, t0) {
 }
 
 function editView(t) {
-  const opt = (v) => `<option value="${v}" ${t.priority === v ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)}</option>`;
+  const opt = (v) => `<option value="${v}" ${t.priority === v ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)} priority</option>`;
   return `
-    <li data-id="${esc(t.id)}">
+    <li class="edit-row" data-id="${esc(t.id)}">
       <form class="edit" id="editForm">
-        <input type="text" id="editTitle" name="title" value="${esc(t.title)}" required aria-label="Task">
+        <input type="text" class="write" id="editTitle" name="title" value="${esc(t.title)}" required aria-label="Task">
+        <textarea class="write" id="editNotes" name="notes" rows="2" placeholder="Notes (optional)" aria-label="Notes">${esc(t.notes)}</textarea>
         <div class="row">
-          <select id="editPriority" name="priority" aria-label="Priority">${opt('low')}${opt('medium')}${opt('high')}</select>
-          <input type="date" id="editDue" name="due" value="${t.due || ''}" aria-label="Due date">
+          <select class="field" id="editPriority" name="priority" aria-label="Priority">${opt('low')}${opt('medium')}${opt('high')}</select>
+          <input type="date" class="field" id="editDue" name="due" value="${t.due || ''}" aria-label="Due date">
         </div>
-        <textarea id="editNotes" name="notes" rows="3" aria-label="Notes">${esc(t.notes)}</textarea>
         <div class="row">
           <button class="primary" type="submit">Save</button>
           <button type="button" data-act="cancel">Cancel</button>
@@ -466,6 +527,7 @@ function start(s) {
   );
 }
 
+$('#today').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 render();
 (async () => {
   const cl = window.claude;

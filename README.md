@@ -1,6 +1,6 @@
 # Task Notepad
 
-A simple notepad for keeping track of tasks, styled like a legal pad. It's one HTML file: open `index.html` in any browser.
+A simple notepad for keeping track of tasks, styled like a yellow legal pad: ruled lines, a red margin, and tasks written in blue ballpoint. It's one HTML file: open `index.html` in any browser.
 
 ## Features
 
@@ -8,7 +8,7 @@ A simple notepad for keeping track of tasks, styled like a legal pad. It's one H
 - Mark tasks done, edit them in place, or delete them (with a Delete / Keep check first)
 - Filter by All / Active / Done, search the text, and sort by newest, due date, or priority
 - Highlights overdue tasks and shows active / done / overdue counts at the top
-- Follows your system's light or dark theme
+- The pad stays yellow in dark mode; only the desk around it darkens
 - Export your tasks to a JSON file and import them back (handy for backups or moving to another device)
 
 ## Install it as an app
