@@ -1,7 +1,7 @@
 {
   "name": "Task Notepad",
   "short_name": "Tasks",
-  "description": "Track job applications on a board (Reverts, Interview Round 1, Interview Round 2, Rejections) or as a checklist.",
+  "description": "Track job applications as tickets (company, role, interview date and time, notes) on a board or a list.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

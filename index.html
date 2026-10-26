@@ -17,8 +17,8 @@
   body { margin: 0; }
   [hidden] { display: none !important; }
   /* Layout: a slim view switcher on the left (Board / List), and the workspace beside it — header,
-     add form, toolbar, then either four paper columns of cards or one ruled list. On phones the
-     board's columns become a swipeable row. */
+     the new-ticket form, toolbar, then either four paper columns of ticket cards or one list.
+     Opening a ticket shows its full details in a panel (a bottom sheet on phones). */
   :root {
     --desk: #e9ecef;
     --paper: #fbf8e9;
@@ -31,6 +31,7 @@
     --field: #ffffff;
     --line: #d6d9d2;
     --rule: #c9d8ea;
+    --scrim: rgb(17 21 27 / .45);
     --high: #c23a31;
     --med: #b0700c;
     --low: #2f8551;
@@ -42,14 +43,14 @@
     :root:not([data-theme="light"]) {
       --desk: #11151b; --paper: #1a2029; --card: #232b36; --ink: #e7ebf0; --muted: #94a0ae;
       --accent: #7ea3ff; --accent-ink: #0d1422; --accent-soft: #23324d; --field: #222a35; --line: #313b49; --rule: #263142;
-      --high: #ff8278; --med: #f0b24a; --low: #6fd093;
+      --scrim: rgb(0 0 0 / .6); --high: #ff8278; --med: #f0b24a; --low: #6fd093;
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --desk: #11151b; --paper: #1a2029; --card: #232b36; --ink: #e7ebf0; --muted: #94a0ae;
     --accent: #7ea3ff; --accent-ink: #0d1422; --accent-soft: #23324d; --field: #222a35; --line: #313b49; --rule: #263142;
-    --high: #ff8278; --med: #f0b24a; --low: #6fd093;
+    --scrim: rgb(0 0 0 / .6); --high: #ff8278; --med: #f0b24a; --low: #6fd093;
     color-scheme: dark;
   }
 
@@ -91,20 +92,15 @@
   .sync { font-size: 12px; color: var(--muted); margin-top: 4px; }
   .stats { display: flex; gap: 6px 14px; flex-wrap: wrap; font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .stats b { color: var(--ink); font-weight: 500; }
-  .stats .od b { color: var(--high); }
 
   .panel {
     background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
     box-shadow: 0 1px 2px rgb(0 0 0 / .05);
   }
-  form.add { padding: 14px; display: grid; gap: 8px; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .row > * { min-width: 0; }
   input[type=text], input[type=date], input[type=search], select, textarea {
-    background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+    background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0;
   }
-  #newTitle { flex: 1 1 240px; }
-  textarea { width: 100%; resize: vertical; min-height: 40px; }
+  textarea { width: 100%; resize: vertical; }
   button {
     background: transparent; border: 1px solid var(--line); border-radius: 6px;
     padding: 7px 12px; cursor: pointer; line-height: 1.2;
@@ -115,6 +111,38 @@
   .primary:hover:not(:disabled) { border-color: var(--accent); filter: brightness(1.06); }
   .danger { color: var(--high); border-color: currentColor; font-weight: 600; }
 
+  /* ---------- ticket form (new and edit) ---------- */
+  .new-ticket { padding: 16px; display: grid; gap: 12px; }
+  .new-ticket > h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; }
+  .ticket-form { display: grid; gap: 12px 18px; grid-template-columns: minmax(0, 1fr); }
+  .f { display: grid; gap: 4px; min-width: 0; }
+  .f-label { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .02em; }
+  .f input, .f select, .f textarea { width: 100%; }
+  .f-company input { font-size: 18px; font-weight: 600; }
+  .time { display: inline-flex; align-items: center; gap: 6px; }
+  .time input {
+    width: 3.4em; text-align: center; font-family: var(--mono); font-variant-numeric: tabular-nums;
+  }
+  .colon { font-family: var(--mono); font-weight: 600; font-size: 18px; color: var(--muted); }
+  .f-hint { font-size: 12px; color: var(--muted); }
+  .f-notes textarea { min-height: 120px; }
+  .f-actions { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+  .f-actions .primary { padding: 9px 18px; }
+  .form-error { font-size: 13px; color: var(--high); }
+  @media (min-width: 761px) {
+    .ticket-form { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+    .ticket-form .f-company { grid-column: 1; grid-row: 1; }
+    .ticket-form .f-role { grid-column: 1; grid-row: 2; }
+    .ticket-form .f-notes { grid-column: 1; grid-row: 3 / span 4; display: flex; flex-direction: column; }
+    .ticket-form .f-notes textarea { flex: 1; }
+    .ticket-form .f-date { grid-column: 2; grid-row: 1; }
+    .ticket-form .f-time { grid-column: 2; grid-row: 2; }
+    .ticket-form .f-day { grid-column: 2; grid-row: 3; }
+    .ticket-form .f-stage { grid-column: 2; grid-row: 4; }
+    .ticket-form .f-actions { grid-column: 2; grid-row: 5; }
+    .ticket-form .form-error { grid-column: 2; grid-row: 6; }
+  }
+
   .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .toolbar input[type=search] { flex: 1 1 180px; }
   .tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
@@ -124,11 +152,13 @@
   .colnav { display: none; gap: 6px; flex-wrap: wrap; }
   .colnav button { font-size: 13px; padding: 5px 10px; border-radius: 999px; }
 
-  /* stage colors: shared by column dots and the stage chip in the list */
+  /* stage colors: shared by column dots and stage chips */
   [data-stage=reverts] { --stage: var(--accent); }
   [data-stage=round1] { --stage: var(--med); }
   [data-stage=round2] { --stage: var(--low); }
   [data-stage=rejected] { --stage: var(--high); }
+  .stage-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink); }
+  .stage-chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--stage); }
 
   /* ---------- board ---------- */
   .board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
@@ -148,54 +178,66 @@
 
   li.card {
     background: var(--card); border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px;
-    box-shadow: 0 1px 2px rgb(0 0 0 / .06); display: grid; gap: 6px; min-width: 0;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .06); display: grid; gap: 2px; min-width: 0; cursor: pointer;
   }
-  li.card[draggable=true] { cursor: grab; }
+  li.card:hover { border-color: var(--muted); }
   li.card.dragging { opacity: .45; }
-  .c-head { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; }
-  .c-head .check { margin-top: 3px; }
-  .c-notes { color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
-  .c-actions { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; padding-top: 2px; }
-  .c-actions button { padding: 3px 8px; font-size: 12.5px; }
-  .c-actions .spacer { flex: 1; }
-  .move-sel { font-size: 12.5px; padding: 3px 6px; flex: 1 1 110px; min-width: 0; }
+  .company { font-family: var(--display); font-weight: 600; font-size: 16.5px; line-height: 1.25; overflow-wrap: anywhere; }
+  .role { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+  .when {
+    display: flex; align-items: flex-start; gap: 6px; margin-top: 6px;
+    font-family: var(--mono); font-size: 12px; color: var(--ink); font-variant-numeric: tabular-nums;
+  }
+  .when svg { width: 14px; height: 14px; flex: none; margin-top: 2px; color: var(--muted); }
+  .when.none { color: var(--muted); font-family: var(--body); }
+  .is-done .company { text-decoration: line-through; color: var(--muted); }
 
   /* ---------- list ---------- */
   .list-panel { padding: 4px 16px; }
   ul.list { list-style: none; margin: 0; padding: 0; }
   li.task {
     display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: start;
-    padding: 12px 0; border-bottom: 1px solid var(--rule);
+    padding: 12px 0; border-bottom: 1px solid var(--rule); cursor: pointer;
   }
   li.task:last-child { border-bottom: 0; }
-
-  /* ---------- shared item parts ---------- */
-  .check { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
-  .t-title { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
-  .is-done .t-title { text-decoration: line-through; color: var(--muted); font-weight: 500; }
-  .t-notes { color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }
-  .meta { display: flex; gap: 6px 10px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .pill {
-    font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
-    border: 1px solid currentColor; border-radius: 999px; padding: 0 7px;
-  }
-  .p-high { color: var(--high); } .p-medium { color: var(--med); } .p-low { color: var(--low); }
-  .stage-chip { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); }
-  .stage-chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--stage); }
-  .due { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-  .overdue { color: var(--high); font-weight: 500; }
-  .actions { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
-  .actions button { padding: 4px 9px; font-size: 13px; }
-  .confirm { font-size: 13px; }
-  form.edit { display: grid; gap: 8px; }
-  form.edit input[type=text] { width: 100%; }
-  li.edit-row { padding: 12px 0; border-bottom: 1px solid var(--rule); }
-  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 8px; border: 1px dashed var(--line); border-radius: 7px; }
+  li.task .when { margin-top: 4px; }
+  .check { width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--accent); cursor: pointer; }
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 8px; border: 1px dashed var(--line); border-radius: 7px; cursor: default; }
   ul.list .empty { border: 0; padding: 28px 0; font-size: 14px; }
 
   footer { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
   .note { font-size: 13px; color: var(--muted); margin-right: auto; }
   .note.err { color: var(--high); }
+  .confirm { font-size: 13px; }
+
+  /* ---------- ticket details ---------- */
+  .scrim {
+    position: fixed; inset: 0; z-index: 20; background: var(--scrim);
+    display: flex; align-items: center; justify-content: center;
+    padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  }
+  .sheet {
+    width: min(640px, 100%); max-height: 100%; overflow: auto;
+    background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: 0 20px 50px rgb(0 0 0 / .25); padding: 18px 20px 20px; display: grid; gap: 14px;
+  }
+  .d-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .x { border: 0; font-size: 22px; line-height: 1; padding: 4px 8px; color: var(--muted); }
+  .d-company { margin: 0; font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1.15; overflow-wrap: anywhere; }
+  .d-role { color: var(--muted); font-size: 16px; margin-top: 2px; overflow-wrap: anywhere; }
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; }
+  .facts div { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+  .facts dt { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .facts dd { margin: 2px 0 0; font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .d-section h3 { margin: 0 0 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 500; }
+  .d-notes { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .d-notes.none { color: var(--muted); }
+  .d-meta { font-size: 12px; color: var(--muted); }
+  .d-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-top: 1px solid var(--line); padding-top: 14px; }
+  .d-actions .spacer { flex: 1; }
+  .d-actions label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+  .sheet .ticket-form { grid-template-columns: minmax(0, 1fr); }
+  .sheet .ticket-form > * { grid-column: auto; grid-row: auto; }
 
   @media (max-width: 1080px) and (min-width: 761px) {
     .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -215,7 +257,14 @@
     .col { scroll-snap-align: start; }
     .list-panel { padding: 4px 12px; }
     li.task { grid-template-columns: 22px 1fr; }
-    li.task .actions { grid-column: 2; justify-content: flex-start; }
+    li.task .stage-chip { grid-column: 2; }
+    .scrim { align-items: flex-end; padding: max(24px, env(safe-area-inset-top, 0px)) 0 0; }
+    .sheet {
+      width: 100%; border-radius: 14px 14px 0 0; border-bottom: 0;
+      padding: 16px max(16px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    }
+    .facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .facts div:first-child { grid-column: 1 / -1; }
   }
   @media (prefers-reduced-motion: reduce) { ul.cards { transition: none; } }
 </style>
@@ -237,30 +286,15 @@
     <header class="top">
       <div>
         <h1>Task Notepad</h1>
-        <div class="sync" id="sync">Loading your tasks…</div>
+        <div class="sync" id="sync">Loading your tickets…</div>
       </div>
       <div class="stats" id="stats"></div>
     </header>
 
-    <form class="add panel" id="addForm" autocomplete="off">
-      <div class="row">
-        <input type="text" id="newTitle" placeholder="Company and role, or any task" required aria-label="Task">
-        <select id="newStage" aria-label="Column">
-          <option value="reverts" selected>Reverts</option>
-          <option value="round1">Interview Round 1</option>
-          <option value="round2">Interview Round 2</option>
-          <option value="rejected">Rejections</option>
-        </select>
-        <select id="newPriority" aria-label="Priority">
-          <option value="low">Low</option>
-          <option value="medium" selected>Medium</option>
-          <option value="high">High</option>
-        </select>
-        <input type="date" id="newDue" aria-label="Due date">
-        <button class="primary" type="submit">Add</button>
-      </div>
-      <textarea id="newNotes" rows="2" placeholder="Notes (optional)" aria-label="Notes"></textarea>
-    </form>
+    <section class="new-ticket panel" aria-labelledby="newTicketTitle">
+      <h2 id="newTicketTitle">New ticket</h2>
+      <form class="ticket-form" id="addForm" autocomplete="off" novalidate></form>
+    </section>
 
     <div class="toolbar">
       <div class="colnav" id="colnav" role="group" aria-label="Jump to column"></div>
@@ -269,11 +303,10 @@
         <button type="button" data-filter="active" aria-pressed="false">Active</button>
         <button type="button" data-filter="done" aria-pressed="false">Done</button>
       </div>
-      <input type="search" id="search" placeholder="Search" aria-label="Search">
+      <input type="search" id="search" placeholder="Search companies, roles and notes" aria-label="Search">
       <select id="sort" aria-label="Sort">
         <option value="created">Newest first</option>
-        <option value="due">Due date</option>
-        <option value="priority">Priority</option>
+        <option value="date">Interview date</option>
       </select>
     </div>
 
@@ -293,21 +326,26 @@
   </main>
 </div>
 
+<div class="scrim" id="detail" hidden></div>
+
 <script>
-const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
 const STAGES = ['reverts', 'round1', 'round2', 'rejected'];
 const STAGE_NAME = { reverts: 'Reverts', round1: 'Interview Round 1', round2: 'Interview Round 2', rejected: 'Rejections' };
 const STAGE_SHORT = { reverts: 'reverts', round1: 'round 1', round2: 'round 2', rejected: 'rejections' };
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const LOCAL_KEY = 'task-notepad.v1';
 const VIEW_KEY = 'task-notepad.view';
+const CAL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
 const $ = (s) => document.querySelector(s);
 
 let tasks = [];
 let view = 'board';
 let filter = 'all';
-let editingId = null;
 let confirmingId = null;
 let store = null;
+let openId = null;       // ticket shown in the details panel
+let detailMode = 'view'; // 'view' or 'edit'
+let lastFocus = null;
 
 try { if (['board', 'list'].includes(localStorage.getItem(VIEW_KEY))) view = localStorage.getItem(VIEW_KEY); } catch {}
 
@@ -315,8 +353,13 @@ function today() {
   const d = new Date();
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
-function fmtDate(iso) {
-  return new Date(iso + 'T00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+function fmtDate(iso, long) {
+  return new Date(iso + 'T00:00').toLocaleDateString(undefined, long
+    ? { month: 'long', day: 'numeric', year: 'numeric' }
+    : { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function dayOf(iso) {
+  return DAYS[(new Date(iso + 'T00:00').getDay() + 6) % 7];
 }
 function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -324,18 +367,30 @@ function esc(s) {
 function newId() {
   return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
-// Every task has a board column (`stage`) and a done tick for the list. Tasks saved before the
-// four columns existed start in Reverts and keep their done state.
+// A ticket: company, role, interview date, time (HH:MM), day, notes, board column and a done tick.
+// Tasks saved by earlier versions keep their title as the company and their due date as the date.
 function clean(t) {
+  const date = [t.date, t.due].find((d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '')) || null;
   return {
-    title: String(t.title || '').slice(0, 500),
-    notes: String(t.notes || '').slice(0, 5000),
-    priority: PRIORITY_RANK[t.priority] !== undefined ? t.priority : 'medium',
-    due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || '') ? t.due : null,
+    company: String(t.company || t.title || '').slice(0, 300),
+    role: String(t.role || '').slice(0, 300),
+    date,
+    time: /^([01]\d|2[0-3]):[0-5]\d$/.test(t.time || '') ? t.time : '',
+    day: DAYS.includes(t.day) ? t.day : (date && !('day' in t) ? dayOf(date) : ''),
+    notes: String(t.notes || '').slice(0, 10000),
     stage: STAGES.includes(t.stage) ? t.stage : 'reverts',
     done: !!t.done || t.status === 'done',
     created: Number(t.created) || Date.now(),
   };
+}
+function whenParts(t) {
+  return [t.date ? fmtDate(t.date) : '', t.time, t.day].filter(Boolean);
+}
+function whenHtml(t) {
+  const parts = whenParts(t);
+  return parts.length
+    ? `<div class="when">${CAL_ICON}<span>${parts.map(esc).join(' · ')}</span></div>`
+    : `<div class="when none">No interview date yet</div>`;
 }
 function say(msg, err) {
   const n = $('#note');
@@ -348,10 +403,10 @@ function say(msg, err) {
 function accountStore(db, uid) {
   const col = db.collection('data/users/' + uid);
   const queues = {};
-  // One write at a time per task.
+  // One write at a time per ticket.
   const queued = (id, fn) => (queues[id] = (queues[id] || Promise.resolve()).then(fn, fn));
   return {
-    label: 'Saved to your claude.ai account — open this page on any device to see the same tasks.',
+    label: 'Saved to your claude.ai account — open this page on any device to see the same tickets.',
     subscribe(cb, onErr) {
       return col.onSnapshot(
         (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
@@ -376,8 +431,8 @@ function browserStore() {
   };
   return {
     label: window.claude
-      ? 'Saved in this browser only. Sign in to claude.ai to keep tasks across devices.'
-      : 'Saved in this browser only. Use Export to back up or move your tasks.',
+      ? 'Saved in this browser only. Sign in to claude.ai to keep tickets across devices.'
+      : 'Saved in this browser only. Use Export to back up or move your tickets.',
     subscribe(cb) { listener = cb; flush(); return () => {}; },
     put: async (id, t) => { data[id] = t; flush(); },
     patch: async (id, p) => { if (data[id]) { Object.assign(data[id], p); flush(); } },
@@ -386,46 +441,96 @@ function browserStore() {
 }
 
 async function write(promise, what) {
-  try { await promise; }
+  try { await promise; return true; }
   catch (e) {
     const code = e && e.code;
-    if (code === 'quota_exceeded') say('You have too many tasks saved. Delete some finished ones to add more.', true);
+    if (code === 'quota_exceeded') say('You have too many tickets saved. Delete some finished ones to add more.', true);
     else if (code === 'invalid_argument') say(`Couldn't ${what}. You may only have view access to this page.`, true);
     else say(`Couldn't ${what}. Check your connection and try again.`, true);
+    return false;
   }
 }
 
 function moveTask(t, stage) {
   if (!t || t.stage === stage || !STAGES.includes(stage)) return;
-  write(store.patch(t.id, { stage }), 'move that task');
+  write(store.patch(t.id, { stage }), 'move that ticket');
+}
+
+/* ---------- ticket form (used for new tickets and for editing) ---------- */
+
+function formFields(p, t) {
+  const time = (t.time || '').split(':');
+  const dayOpts = ['<option value="">Choose a day</option>']
+    .concat(DAYS.map((d) => `<option value="${d}" ${t.day === d ? 'selected' : ''}>${d}</option>`)).join('');
+  const stageOpts = STAGES.map((s) => `<option value="${s}" ${(t.stage || 'reverts') === s ? 'selected' : ''}>${STAGE_NAME[s]}</option>`).join('');
+  return `
+    <label class="f f-company"><span class="f-label">Company name</span>
+      <input type="text" id="${p}Company" name="company" value="${esc(t.company || '')}" placeholder="e.g. Acme Corp" maxlength="300"></label>
+    <label class="f f-role"><span class="f-label">Job role</span>
+      <input type="text" id="${p}Role" name="role" value="${esc(t.role || '')}" placeholder="e.g. Product Designer" maxlength="300"></label>
+    <label class="f f-date"><span class="f-label">Interview date</span>
+      <input type="date" id="${p}Date" name="date" value="${t.date || ''}"></label>
+    <div class="f f-time"><span class="f-label" id="${p}TimeLabel">Time <span class="f-hint">(24-hour)</span></span>
+      <div class="time" role="group" aria-labelledby="${p}TimeLabel">
+        <input type="text" id="${p}Hour" name="hour" value="${time[0] || ''}" inputmode="numeric" maxlength="2" placeholder="HH" aria-label="Hour" data-hour>
+        <span class="colon" aria-hidden="true">:</span>
+        <input type="text" id="${p}Minute" name="minute" value="${time[1] || ''}" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="Minutes" data-minute>
+      </div></div>
+    <label class="f f-day"><span class="f-label">Day</span>
+      <select id="${p}Day" name="day">${dayOpts}</select></label>
+    <label class="f f-notes"><span class="f-label">Notes</span>
+      <textarea id="${p}Notes" name="notes" rows="5" placeholder="Anything about the role: requirements, who you're meeting, what to prepare">${esc(t.notes || '')}</textarea></label>
+    <label class="f f-stage"><span class="f-label">Column</span>
+      <select id="${p}Stage" name="stage">${stageOpts}</select></label>`;
+}
+
+// Reads a ticket form. Returns the fields, or { error } when something needs fixing.
+function readForm(f) {
+  const v = (n) => f.elements.namedItem(n).value.trim();
+  const company = v('company');
+  if (!company) return { error: 'Add the company name.', focus: 'company' };
+  const h = v('hour'), m = v('minute');
+  let time = '';
+  if (h || m) {
+    const hh = Number(h), mm = Number(m || '0');
+    if (!h || !/^\d{1,2}$/.test(h) || hh > 23) return { error: 'Hours go from 00 to 23.', focus: 'hour' };
+    if (!/^\d{0,2}$/.test(m) || mm > 59) return { error: 'Minutes go from 00 to 59.', focus: 'minute' };
+    time = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+  }
+  const date = v('date');
+  return {
+    company, role: v('role'),
+    date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
+    time, day: DAYS.includes(v('day')) ? v('day') : '',
+    notes: f.elements.namedItem('notes').value.trim(),
+    stage: STAGES.includes(v('stage')) ? v('stage') : 'reverts',
+  };
+}
+function showFormError(f, res) {
+  let box = f.querySelector('.form-error');
+  if (!box) { box = document.createElement('div'); box.className = 'form-error'; box.setAttribute('role', 'alert'); f.appendChild(box); }
+  box.textContent = res ? res.error : '';
+  box.hidden = !res;
+  if (res && res.focus) f.elements.namedItem(res.focus).focus();
+}
+
+function resetAddForm(stage) {
+  const f = $('#addForm');
+  f.innerHTML = formFields('new', { stage }) +
+    `<div class="f-actions"><button class="primary" type="submit">Create ticket</button></div>`;
 }
 
 /* ---------- rendering ---------- */
 
 function matches(t) {
   const q = $('#search').value.trim().toLowerCase();
-  return !q || (t.title + ' ' + t.notes).toLowerCase().includes(q);
+  return !q || (t.company + ' ' + t.role + ' ' + t.notes).toLowerCase().includes(q);
 }
 function sorted(list) {
-  const sort = $('#sort').value;
-  return list.sort((a, b) => {
-    if (sort === 'due') return (a.due || '9999-99-99').localeCompare(b.due || '9999-99-99') || b.created - a.created;
-    if (sort === 'priority') return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || b.created - a.created;
-    return b.created - a.created;
-  });
-}
-function metaHtml(t, t0, withStage) {
-  const late = !t.done && t.due && t.due < t0;
-  return `<div class="meta">
-      ${withStage ? `<span class="stage-chip" data-stage="${t.stage}">${STAGE_NAME[t.stage]}</span>` : ''}
-      <span class="pill p-${t.priority}">${t.priority}</span>
-      ${t.due ? `<span class="due ${late ? 'overdue' : ''}">Due ${fmtDate(t.due)}${late ? ' · overdue' : ''}</span>` : ''}
-    </div>`;
-}
-function itemActions(t) {
-  return confirmingId === t.id
-    ? `<span class="confirm">Delete this task?</span><button type="button" class="danger" data-act="del-yes">Delete</button><button type="button" data-act="del-no">Keep</button>`
-    : `<button type="button" data-act="edit">Edit</button><button type="button" data-act="del">Delete</button>`;
+  const byDate = $('#sort').value === 'date';
+  return list.sort((a, b) => byDate
+    ? ((a.date || '9999-99-99') + (a.time || '99:99')).localeCompare((b.date || '9999-99-99') + (b.time || '99:99')) || b.created - a.created
+    : b.created - a.created);
 }
 
 function render() {
@@ -436,24 +541,26 @@ function render() {
   $('#tabs').hidden = view !== 'list';
   $('#colnav').hidden = view !== 'board';
 
-  const overdue = tasks.filter((t) => !t.done && t.due && t.due < t0).length;
-  const od = overdue ? `<span class="od"><b>${overdue}</b> overdue</span>` : '';
+  const upcoming = tasks.filter((t) => !t.done && t.date && t.date >= t0).length;
+  const up = `<span><b>${upcoming}</b> upcoming</span>`;
   if (view === 'board') {
-    $('#stats').innerHTML = STAGES.map((s) => `<span><b>${tasks.filter((t) => t.stage === s).length}</b> ${STAGE_SHORT[s]}</span>`).join('') + od;
-    renderBoard(t0);
+    $('#stats').innerHTML = STAGES.map((s) => `<span><b>${tasks.filter((t) => t.stage === s).length}</b> ${STAGE_SHORT[s]}</span>`).join('') + up;
+    renderBoard();
   } else {
     const active = tasks.filter((t) => !t.done).length;
-    $('#stats').innerHTML = `<span><b>${active}</b> active</span><span><b>${tasks.length - active}</b> done</span>` + od;
-    renderList(t0);
+    $('#stats').innerHTML = `<span><b>${active}</b> active</span><span><b>${tasks.length - active}</b> done</span>` + up;
+    renderList();
   }
 
   const doneCount = tasks.filter((t) => t.done).length;
   $('#clearWrap').innerHTML = confirmingId === '__clear'
-    ? `<span class="confirm">Remove ${doneCount} completed task${doneCount === 1 ? '' : 's'}?</span> <button type="button" class="danger" data-act="clear-yes">Remove</button> <button type="button" data-act="clear-no">Keep</button>`
+    ? `<span class="confirm">Remove ${doneCount} completed ticket${doneCount === 1 ? '' : 's'}?</span> <button type="button" class="danger" data-act="clear-yes">Remove</button> <button type="button" data-act="clear-no">Keep</button>`
     : `<button type="button" data-act="clear" ${doneCount ? '' : 'disabled'}>Clear completed</button>`;
+
+  renderDetail();
 }
 
-function renderBoard(t0) {
+function renderBoard() {
   const board = $('#boardView');
   if (!board.children.length) {
     board.innerHTML = STAGES.map((s) => `
@@ -467,94 +574,145 @@ function renderBoard(t0) {
     const all = tasks.filter((t) => t.stage === s);
     $('#count-' + s).textContent = all.length;
     const shown = sorted(all.filter(matches));
-    const ul = board.querySelector(`ul.cards[data-stage=${s}]`);
-    ul.innerHTML = shown.length
-      ? shown.map((t) => (t.id === editingId ? editView(t, 'card') : cardView(t, t0))).join('')
-      : `<li class="empty">${all.length ? 'No matches here.' : (s === 'reverts' && !tasks.length ? 'Add one above and it lands here.' : 'Drag a card here, or use Move to on a card.')}</li>`;
+    board.querySelector(`ul.cards[data-stage=${s}]`).innerHTML = shown.length
+      ? shown.map((t) => `
+        <li class="card ${t.done ? 'is-done' : ''}" draggable="true" tabindex="0" data-open="${esc(t.id)}" aria-label="Open ticket: ${esc(t.company)}">
+          <div class="company">${esc(t.company)}</div>
+          ${t.role ? `<div class="role">${esc(t.role)}</div>` : ''}
+          ${whenHtml(t)}
+        </li>`).join('')
+      : `<li class="empty">${all.length ? 'No matches here.' : (s === 'reverts' && !tasks.length ? 'Create a ticket above and it lands here.' : 'Drag a ticket here, or open one and use Move to.')}</li>`;
   }
 }
 
-function cardView(t, t0) {
-  const opts = STAGES.map((s) => `<option value="${s}" ${s === t.stage ? 'selected' : ''}>${STAGE_NAME[s]}</option>`).join('');
-  const actions = confirmingId === t.id
-    ? itemActions(t)
-    : `<select class="move-sel" data-act="stage" aria-label="Move to column" title="Move to column">${opts}</select>${itemActions(t)}`;
-  return `
-    <li class="card ${t.done ? 'is-done' : ''}" draggable="true" data-id="${esc(t.id)}">
-      <div class="c-head">
-        <input type="checkbox" class="check" data-act="toggle" ${t.done ? 'checked' : ''} aria-label="Mark ${esc(t.title)} done">
-        <div class="t-title">${esc(t.title)}</div>
-      </div>
-      ${t.notes ? `<div class="c-notes">${esc(t.notes)}</div>` : ''}
-      ${metaHtml(t, t0, false)}
-      <div class="c-actions">${actions}</div>
-    </li>`;
-}
-
-function renderList(t0) {
+function renderList() {
   const list = $('#list');
   const items = sorted(tasks.filter((t) => filter === 'all' || (filter === 'done') === t.done).filter(matches));
   if (!items.length) {
-    list.innerHTML = `<li class="empty">${tasks.length ? 'Nothing matches. Try another filter or search.' : 'No tasks yet. Add one above.'}</li>`;
+    list.innerHTML = `<li class="empty">${tasks.length ? 'Nothing matches. Try another filter or search.' : 'No tickets yet. Create one above.'}</li>`;
     return;
   }
-  list.innerHTML = items.map((t) => (t.id === editingId ? editView(t, 'row') : `
-    <li class="task ${t.done ? 'is-done' : ''}" data-id="${esc(t.id)}">
-      <input type="checkbox" class="check" data-act="toggle" ${t.done ? 'checked' : ''} aria-label="Mark ${esc(t.title)} done">
+  list.innerHTML = items.map((t) => `
+    <li class="task ${t.done ? 'is-done' : ''}" data-id="${esc(t.id)}" data-open="${esc(t.id)}" tabindex="0" aria-label="Open ticket: ${esc(t.company)}">
+      <input type="checkbox" class="check" data-act="toggle" ${t.done ? 'checked' : ''} aria-label="Mark ${esc(t.company)} done">
       <div>
-        <div class="t-title">${esc(t.title)}</div>
-        ${t.notes ? `<div class="t-notes">${esc(t.notes)}</div>` : ''}
-        ${metaHtml(t, t0, true)}
+        <div class="company">${esc(t.company)}</div>
+        ${t.role ? `<div class="role">${esc(t.role)}</div>` : ''}
+        ${whenHtml(t)}
       </div>
-      <div class="actions">${itemActions(t)}</div>
-    </li>`)).join('');
+      <span class="stage-chip" data-stage="${t.stage}">${STAGE_NAME[t.stage]}</span>
+    </li>`).join('');
 }
 
-function editView(t, kind) {
-  const opt = (v) => `<option value="${v}" ${t.priority === v ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)}</option>`;
+function renderDetail() {
+  const box = $('#detail');
+  const t = openId && tasks.find((x) => x.id === openId);
+  if (!t) { if (openId) closeDetail(); box.hidden = true; return; }
+  box.hidden = false;
+  if (detailMode === 'edit') {
+    if (box.querySelector('#editForm')) return; // keep what the viewer is typing
+    box.innerHTML = `
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dHead" data-id="${esc(t.id)}">
+        <div class="d-top"><h2 class="d-company" id="dHead" style="font-size:20px">Edit ticket</h2>
+          <button type="button" class="x" data-act="close" aria-label="Close">×</button></div>
+        <form class="ticket-form" id="editForm" autocomplete="off" novalidate>
+          ${formFields('edit', t)}
+          <div class="f-actions"><button class="primary" type="submit">Save</button><button type="button" data-act="cancel">Cancel</button></div>
+        </form>
+      </div>`;
+    $('#editCompany').focus();
+    return;
+  }
   const stageOpts = STAGES.map((s) => `<option value="${s}" ${s === t.stage ? 'selected' : ''}>${STAGE_NAME[s]}</option>`).join('');
-  return `
-    <li class="${kind === 'card' ? 'card' : 'edit-row'}" data-id="${esc(t.id)}">
-      <form class="edit" id="editForm">
-        <input type="text" id="editTitle" name="title" value="${esc(t.title)}" required aria-label="Task">
-        <div class="row">
-          <select id="editStage" name="stage" aria-label="Column">${stageOpts}</select>
-          <select id="editPriority" name="priority" aria-label="Priority">${opt('low')}${opt('medium')}${opt('high')}</select>
-          <input type="date" id="editDue" name="due" value="${t.due || ''}" aria-label="Due date">
-        </div>
-        <textarea id="editNotes" name="notes" rows="3" placeholder="Notes (optional)" aria-label="Notes">${esc(t.notes)}</textarea>
-        <div class="row">
-          <button class="primary" type="submit">Save</button>
-          <button type="button" data-act="cancel">Cancel</button>
-        </div>
-      </form>
-    </li>`;
+  const actions = confirmingId === t.id
+    ? `<span class="confirm">Delete this ticket for good?</span><span class="spacer"></span>
+       <button type="button" class="danger" data-act="del-yes">Delete</button><button type="button" data-act="del-no">Keep</button>`
+    : `<label>Move to <select data-act="stage" aria-label="Move to column">${stageOpts}</select></label>
+       <label><input type="checkbox" class="check" data-act="toggle" ${t.done ? 'checked' : ''}> Done</label>
+       <span class="spacer"></span>
+       <button type="button" data-act="edit">Edit</button><button type="button" data-act="del">Delete</button>`;
+  box.innerHTML = `
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dHead" data-id="${esc(t.id)}">
+      <div class="d-top"><span class="stage-chip" data-stage="${t.stage}">${STAGE_NAME[t.stage]}${t.done ? ' · done' : ''}</span>
+        <button type="button" class="x" data-act="close" aria-label="Close">×</button></div>
+      <div>
+        <h2 class="d-company" id="dHead">${esc(t.company)}</h2>
+        <div class="d-role">${t.role ? esc(t.role) : 'No job role added'}</div>
+      </div>
+      <dl class="facts">
+        <div><dt>Interview date</dt><dd>${t.date ? fmtDate(t.date, true) : '—'}</dd></div>
+        <div><dt>Time</dt><dd>${t.time || '—'}</dd></div>
+        <div><dt>Day</dt><dd>${t.day || '—'}</dd></div>
+      </dl>
+      ${t.date && t.day && dayOf(t.date) !== t.day ? `<div class="d-meta">Heads up: ${fmtDate(t.date, true)} is a ${dayOf(t.date)}.</div>` : ''}
+      <section class="d-section"><h3>Notes</h3>
+        <p class="d-notes ${t.notes ? '' : 'none'}">${t.notes ? esc(t.notes) : 'No notes yet. Use Edit to add some.'}</p></section>
+      ${t.created > 1.6e12 ? `<div class="d-meta">Created ${new Date(t.created).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>` : ''}
+      <div class="d-actions">${actions}</div>
+    </div>`;
+}
+
+function openDetail(id) {
+  lastFocus = document.activeElement;
+  openId = id; detailMode = 'view'; confirmingId = null;
+  renderDetail();
+  const x = $('#detail .x');
+  if (x) x.focus();
+}
+function closeDetail() {
+  openId = null; detailMode = 'view';
+  if (confirmingId && confirmingId !== '__clear') confirmingId = null;
+  const box = $('#detail');
+  box.hidden = true; box.innerHTML = '';
+  const back = lastFocus && lastFocus.dataset && lastFocus.dataset.open && document.querySelector(`[data-open="${CSS.escape(lastFocus.dataset.open)}"]`);
+  if (back) back.focus();
+  lastFocus = null;
 }
 
 /* ---------- interactions ---------- */
 
-$('#addForm').addEventListener('submit', (e) => {
+$('#addForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const title = $('#newTitle').value.trim();
-  if (!title || !store) return;
-  const stage = $('#newStage').value;
-  const t = clean({
-    title, notes: $('#newNotes').value.trim(), priority: $('#newPriority').value,
-    due: $('#newDue').value, stage, done: false, created: Date.now(),
-  });
-  e.target.reset();
-  $('#newStage').value = stage;  // keep adding to the same column
-  $('#newTitle').focus();
+  const f = e.target;
+  const res = readForm(f);
+  if (res.error) { showFormError(f, res); return; }
+  showFormError(f, null);
+  if (!store) return;
+  resetAddForm(res.stage);  // keep adding to the same column
+  $('#newCompany').focus();
   say('');
-  write(store.put(newId(), t), 'add that task');
+  if (await write(store.put(newId(), { ...res, done: false, created: Date.now() }), 'create that ticket')) say(`Ticket created in ${STAGE_NAME[res.stage]}.`);
+});
+
+// Time boxes: digits only, and jump to minutes after two hour digits.
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (el.matches('[data-hour], [data-minute]')) {
+    el.value = el.value.replace(/\D/g, '').slice(0, 2);
+    if (el.matches('[data-hour]') && el.value.length === 2) el.form.elements.namedItem('minute').focus();
+  }
+});
+document.addEventListener('change', (e) => {
+  const el = e.target;
+  // Picking a date fills in its day of the week; you can still change the day.
+  if (el.name === 'date' && el.form && el.value) el.form.elements.namedItem('day').value = dayOf(el.value);
+  if (el.dataset.act === 'stage') {
+    const holder = el.closest('[data-id]');
+    moveTask(tasks.find((x) => x.id === holder.dataset.id), el.value);
+  }
 });
 
 document.addEventListener('click', (e) => {
+  if (e.target.id === 'detail') { closeDetail(); return; }  // click outside the panel
   const el = e.target.closest('[data-act], [data-jump], [data-view], [data-filter]');
-  if (!el) return;
+  if (!el) {
+    const opener = e.target.closest('[data-open]');
+    if (opener) openDetail(opener.dataset.open);
+    return;
+  }
   if (el.dataset.view) {
     view = el.dataset.view;
-    editingId = null; confirmingId = null;
+    confirmingId = null;
     try { localStorage.setItem(VIEW_KEY, view); } catch {}
     render();
     return;
@@ -569,54 +727,54 @@ document.addEventListener('click', (e) => {
     $('#col-' + el.dataset.jump).scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
     return;
   }
-  const li = el.closest('[data-id]');
-  const t = li && tasks.find((x) => x.id === li.dataset.id);
+  const holder = el.closest('[data-id]');
+  const t = holder && tasks.find((x) => x.id === holder.dataset.id);
   switch (el.dataset.act) {
-    case 'toggle': write(store.patch(t.id, { done: el.checked }), 'update that task'); break;
-    case 'edit': editingId = t.id; confirmingId = null; render(); $('#editTitle').focus(); break;
-    case 'cancel': editingId = null; render(); break;
-    case 'del': confirmingId = t.id; render(); break;
-    case 'del-no': confirmingId = null; render(); break;
-    case 'del-yes': confirmingId = null; write(store.remove(t.id), 'delete that task'); break;
+    case 'toggle': write(store.patch(t.id, { done: el.checked }), 'update that ticket'); break;
+    case 'close': closeDetail(); break;
+    case 'edit': detailMode = 'edit'; confirmingId = null; renderDetail(); break;
+    case 'cancel': detailMode = 'view'; renderDetail(); $('#detail .x').focus(); break;
+    case 'del': confirmingId = t.id; renderDetail(); break;
+    case 'del-no': confirmingId = null; renderDetail(); break;
+    case 'del-yes': confirmingId = null; closeDetail(); write(store.remove(t.id), 'delete that ticket'); break;
     case 'clear': confirmingId = '__clear'; render(); break;
     case 'clear-no': confirmingId = null; render(); break;
     case 'clear-yes':
       confirmingId = null;
-      tasks.filter((x) => x.done).forEach((x) => write(store.remove(x.id), 'clear completed tasks'));
+      tasks.filter((x) => x.done).forEach((x) => write(store.remove(x.id), 'clear completed tickets'));
       render();
       break;
   }
 });
 
-document.addEventListener('change', (e) => {
-  if (e.target.dataset.act !== 'stage') return;
-  const li = e.target.closest('[data-id]');
-  moveTask(tasks.find((x) => x.id === li.dataset.id), e.target.value);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && openId) { closeDetail(); return; }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-open]')) {
+    e.preventDefault();
+    openDetail(e.target.dataset.open);
+  }
 });
 
 document.addEventListener('submit', (e) => {
   if (e.target.id !== 'editForm') return;
   e.preventDefault();
   const f = e.target;
-  const t = tasks.find((x) => x.id === editingId);
-  if (!t) return;
-  const patch = {
-    title: f.title.value.trim() || t.title, notes: f.notes.value.trim(),
-    stage: STAGES.includes(f.stage.value) ? f.stage.value : t.stage,
-    priority: f.priority.value, due: f.due.value || null,
-  };
-  editingId = null;
-  render();
-  write(store.patch(t.id, patch), 'save your changes');
+  const res = readForm(f);
+  if (res.error) { showFormError(f, res); return; }
+  const id = openId;
+  detailMode = 'view';
+  write(store.patch(id, res), 'save your changes');
+  renderDetail();
+  $('#detail .x') && $('#detail .x').focus();
 });
 
-// Drag cards between columns (mouse and trackpad; on phones use Move to).
+// Drag tickets between columns (mouse and trackpad; on phones open a ticket and use Move to).
 let dragId = null;
 const boardEl = $('#boardView');
 boardEl.addEventListener('dragstart', (e) => {
-  const li = e.target.closest && e.target.closest('li.card[draggable=true]');
+  const li = e.target.closest && e.target.closest('li.card');
   if (!li) return;
-  dragId = li.dataset.id;
+  dragId = li.dataset.open;
   li.classList.add('dragging');
   e.dataTransfer.effectAllowed = 'move';
   try { e.dataTransfer.setData('text/plain', dragId); } catch {}
@@ -657,12 +815,12 @@ $('#importFile').addEventListener('change', async (e) => {
     const data = JSON.parse(await file.text());
     if (!Array.isArray(data)) throw new Error('not a list');
     const have = new Set(tasks.map((t) => t.id));
-    const fresh = data.filter((t) => t && t.title && !have.has(t.id));
+    const fresh = data.filter((t) => t && (t.company || t.title) && !have.has(t.id));
     for (const t of fresh) {
       const id = typeof t.id === 'string' && /^[A-Za-z0-9_.~:@+-]{1,100}$/.test(t.id) && t.id !== '.' && t.id !== '..' ? t.id : newId();
-      await write(store.put(id, clean(t)), 'import tasks');
+      await write(store.put(id, clean(t)), 'import tickets');
     }
-    say(fresh.length ? `Imported ${fresh.length} task${fresh.length > 1 ? 's' : ''}.` : 'Those tasks are already here.');
+    say(fresh.length ? `Imported ${fresh.length} ticket${fresh.length > 1 ? 's' : ''}.` : 'Those tickets are already here.');
   } catch {
     say('That file isn\'t a Task Notepad export. Choose a .json file made with Export.', true);
   }
@@ -676,13 +834,13 @@ function start(s) {
   s.subscribe(
     (rows) => {
       tasks = rows.map((r) => ({ id: r.id, ...clean(r) }));
-      if (editingId && !tasks.some((t) => t.id === editingId)) editingId = null;
       render();
     },
-    () => say('Lost the connection to your saved tasks. Reload the page to reconnect.', true),
+    () => say('Lost the connection to your saved tickets. Reload the page to reconnect.', true),
   );
 }
 
+resetAddForm('reverts');
 render();
 (async () => {
   const cl = window.claude;
@@ -697,8 +855,8 @@ render();
     const btn = $('#exportBtn');
     btn.hidden = false;
     btn.addEventListener('click', async () => {
-      const data = tasks.map(({ id, title, notes, priority, due, stage, done, created }) => ({ id, title, notes, priority, due, stage, done, created }));
-      const filename = `tasks-${today()}.json`;
+      const data = tasks.map(({ id, company, role, date, time, day, notes, stage, done, created }) => ({ id, company, role, date, time, day, notes, stage, done, created }));
+      const filename = `tickets-${today()}.json`;
       const json = JSON.stringify(data, null, 2);
       if (downloads) {
         try { await downloads.save({ filename, data: json }); } catch { /* the viewer declined the save */ }

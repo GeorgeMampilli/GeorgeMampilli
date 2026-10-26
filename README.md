@@ -1,25 +1,35 @@
 # Task Notepad
 
-A notepad for tracking job applications, with two views you switch between from the bar on the left:
+A notepad for tracking job applications as tickets, with two views you switch between from the bar on the left:
 
 - **Board**: a Kanban board with four columns: **Reverts**, **Interview Round 1**, **Interview Round 2** and **Rejections**
-- **List**: every task in one checklist, with All / Active / Done filters
+- **List**: every ticket in one checklist, with All / Active / Done filters
 
-Both views show the same tasks. It's one HTML file: open `index.html` in any browser.
+Both views show the same tickets. It's one HTML file: open `index.html` in any browser.
+
+## Tickets
+
+Each ticket has:
+
+- **Company name** (the heading) and **Job role** (the subheading)
+- **Interview date**, a **Time** in 24-hour hours and minutes (`HH : MM`), and the **Day** of the week. Picking a date fills in the day, and you can still change it
+- **Notes** about the role
+- The **Column** it sits in
+
+Cards on the board show just the company, role, and date · time · day. Click or tap a card to open the full ticket with its notes, and to move it to another column, tick it done, edit it, or delete it.
 
 ## Features
 
-- Add an application or task with notes, a priority (low / medium / high), an optional due date, and the column it belongs in
-- On the board, move cards by dragging them (mouse or trackpad) or with the **Move to** menu on each card
-- Tick tasks done in either view, edit them in place, or delete them (with a Delete / Keep check first); **Clear completed** removes ticked tasks
-- Search and sort by newest, due date, or priority in both views
-- Highlights overdue tasks and shows counts at the top
-- On phones the board's columns sit side by side and you swipe between them, or tap a column name to jump to it
+- Move tickets by dragging them between columns (mouse or trackpad), or open one and use **Move to**
+- **Clear completed** removes tickets ticked done
+- Search companies, roles and notes; sort by newest or by interview date
+- Shows per-column and upcoming-interview counts at the top
+- On phones the board's columns sit side by side and you swipe between them, or tap a column name to jump to it; tickets open as a panel from the bottom
 - Remembers which view you used last
 - Light and dark themes
-- Export your tasks to a JSON file and import them back (handy for backups or moving to another device)
+- Export your tickets to a JSON file and import them back (handy for backups or moving to another device)
 
-Tasks saved by earlier versions carry over into the **Reverts** column, and finished ones stay ticked.
+Tasks saved by earlier versions carry over: their title becomes the company name, and a due date becomes the interview date.
 
 ## Install it as an app
 
