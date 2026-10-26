@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#6c1d22">
+<meta name="theme-color" content="#e9ecef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11151b" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon-64.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -11,42 +12,44 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Oswald:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   body { margin: 0; }
   [hidden] { display: none !important; }
-  /* Layout: one yellow legal pad on a desk — glued oxblood binding with a perforation, blank head space,
-     a double red top rule, then blue-ruled lines with a double red margin. Tasks are written in blue ballpoint.
-     The pad itself is a physical object and stays yellow in both themes; only the desk around it changes. */
+  /* Layout: a Kanban board on a desk — header and add form on top, then three paper columns
+     (To do, In progress, Done) holding task cards. On phones the columns become a swipeable row. */
   :root {
-    --desk: #d8dce1;
-    --paper: #fcf18f;
-    --paper-under: #efe27a;
-    --paper-under-2: #e2d46c;
-    --rule: #8eb2d6;
-    --margin: #e0544c;
-    --binding: #6c1d22;
-    --binding-dark: #531418;
-    --binding-ink: #f4dcae;
-    --ink: #222a33;
-    --pen: #1d3d9c;
-    --pencil: #5e5737;
-    --write-line: #b5a24a;
-    --high: #c1251c;
-    --med: #9c5600;
-    --low: #2a7339;
-    --hand: "Kalam", "Segoe Print", "Bradley Hand", cursive;
-    --print: "Oswald", "Arial Narrow", sans-serif;
+    --desk: #e9ecef;
+    --paper: #fbf8e9;
+    --card: #ffffff;
+    --ink: #1f2a37;
+    --muted: #64707d;
+    --accent: #2457c5;
+    --accent-ink: #ffffff;
+    --field: #ffffff;
+    --line: #d6d9d2;
+    --drop: #dfe8fb;
+    --high: #c23a31;
+    --med: #b0700c;
+    --low: #2f8551;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
     --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-    --line: 34px;
-    --gutter: 84px;
-    --margin-x: 66px;
   }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --desk: #16191e; --paper: #f4e886; --paper-under: #ddd06f; --paper-under-2: #c8bb5f; }
+    :root:not([data-theme="light"]) {
+      --desk: #11151b; --paper: #1a2029; --card: #232b36; --ink: #e7ebf0; --muted: #94a0ae;
+      --accent: #7ea3ff; --accent-ink: #0d1422; --field: #222a35; --line: #313b49; --drop: #23324d;
+      --high: #ff8278; --med: #f0b24a; --low: #6fd093;
+      color-scheme: dark;
+    }
   }
-  :root[data-theme="dark"] { --desk: #16191e; --paper: #f4e886; --paper-under: #ddd06f; --paper-under-2: #c8bb5f; }
+  :root[data-theme="dark"] {
+    --desk: #11151b; --paper: #1a2029; --card: #232b36; --ink: #e7ebf0; --muted: #94a0ae;
+    --accent: #7ea3ff; --accent-ink: #0d1422; --field: #222a35; --line: #313b49; --drop: #23324d;
+    --high: #ff8278; --med: #f0b24a; --low: #6fd093;
+    color-scheme: dark;
+  }
 
   * { box-sizing: border-box; }
   body {
@@ -54,221 +57,190 @@
     font: 15px/1.5 var(--body);
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
-    padding-block: 20px 48px;
+    padding-block: 24px 48px;
   }
   button, input, select, textarea { font: inherit; color: inherit; }
-  :focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  /* ---------- the pad ---------- */
-  .pad {
-    max-width: 760px; margin: 0 auto 10px;
-    border-radius: 5px 5px 2px 2px;
-    background: var(--paper);
-    /* sheets underneath peeking out at the bottom */
-    box-shadow:
-      0 3px 0 -1px var(--paper-under),
-      0 6px 0 -2px var(--paper-under-2),
-      0 16px 32px rgb(0 0 0 / .22);
-  }
-  .binding {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
-    padding: 14px 20px 12px var(--gutter);
-    background: linear-gradient(var(--binding), var(--binding-dark));
-    border-radius: 5px 5px 0 0;
-    color: var(--binding-ink);
-  }
+  .app { max-width: 1180px; margin: 0 auto; display: grid; gap: 18px; }
+
+  header.top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
   h1 {
-    margin: 0; font-family: var(--print); font-weight: 500;
-    font-size: 15px; letter-spacing: .24em; text-transform: uppercase;
+    font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.1;
+    letter-spacing: -.01em; margin: 0; text-wrap: balance;
   }
-  .stats { display: flex; gap: 14px; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; opacity: .92; }
-  .stats .od { color: #ffb3a8; }
+  .sync { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .stats { display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stats b { color: var(--ink); font-weight: 500; }
+  .stats .od b { color: var(--high); }
 
-  .sheet { position: relative; padding: 0 20px 18px var(--gutter); }
-  /* perforation under the binding */
-  .sheet::before {
-    content: ""; position: absolute; left: 0; right: 0; top: 7px; height: 4px;
-    background: radial-gradient(circle, rgb(0 0 0 / .2) 1.3px, transparent 1.8px) 0 0 / 9px 4px repeat-x;
+  .panel {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .05);
   }
-  /* double red margin, running the full height of the sheet */
-  .sheet::after {
-    content: ""; position: absolute; top: 0; bottom: 0; left: var(--margin-x); width: 5px;
-    border-left: 1.5px solid var(--margin); border-right: 1.5px solid var(--margin);
-    opacity: .75; pointer-events: none;
-  }
-
-  .head { padding-top: 22px; display: grid; gap: 14px; }
-  .dateline { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-  .date { font-family: var(--hand); font-size: 22px; color: var(--pen); line-height: 1.2; }
-  .sync { font-size: 12px; color: var(--pencil); }
-
-  form.add { display: grid; gap: 10px; }
-  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  form.add { padding: 14px; display: grid; gap: 8px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .row > * { min-width: 0; }
-
-  /* inputs look like writing on a line rather than boxes */
-  .write, .field {
-    background: transparent; border: 0; border-bottom: 1.5px solid var(--write-line); border-radius: 0;
+  input[type=text], input[type=date], input[type=search], select, textarea {
+    background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
   }
-  .write:focus-visible, .field:focus-visible { outline: none; border-bottom: 2px solid var(--pen); }
-  .write {
-    font-family: var(--hand); font-size: 21px; color: var(--pen); padding: 2px 2px 0; line-height: 1.5;
-  }
-  .write::placeholder, textarea.write::placeholder { color: var(--pencil); opacity: .75; }
-  #newTitle { flex: 1 1 100%; }
-  textarea.write { width: 100%; resize: vertical; min-height: 40px; font-size: 18px; }
-  .field { padding: 6px 2px; font-size: 14px; }
-  .field option { color: #222; background: #fff; }
-
+  #newTitle { flex: 1 1 240px; }
+  textarea { width: 100%; resize: vertical; min-height: 40px; }
   button {
-    background: transparent; border: 1.5px solid var(--write-line); border-radius: 4px;
-    padding: 6px 12px; cursor: pointer; line-height: 1.2; font-size: 14px;
+    background: transparent; border: 1px solid var(--line); border-radius: 6px;
+    padding: 7px 12px; cursor: pointer; line-height: 1.2;
   }
-  button:hover:not(:disabled) { border-color: var(--ink); }
+  button:hover:not(:disabled) { border-color: var(--muted); }
   button:disabled { opacity: .5; cursor: default; }
-  .primary { background: var(--pen); border-color: var(--pen); color: #fff; font-weight: 600; padding: 8px 16px; }
-  .primary:hover:not(:disabled) { border-color: var(--pen); filter: brightness(1.12); }
-  .danger { color: var(--high); border-color: var(--high); font-weight: 600; }
+  .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .primary:hover:not(:disabled) { border-color: var(--accent); filter: brightness(1.06); }
+  .danger { color: var(--high); border-color: currentColor; font-weight: 600; }
 
-  .toolbar { display: flex; gap: 12px 16px; flex-wrap: wrap; align-items: flex-end; padding-bottom: 14px; }
-  .toolbar .field[type=search] { flex: 1 1 150px; }
-  .tabs { display: inline-flex; gap: 14px; }
-  .tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 4px 0; color: var(--pencil); }
-  .tabs button[aria-pressed=true] { color: var(--pen); border-bottom-color: var(--pen); font-weight: 600; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .toolbar input[type=search] { flex: 1 1 180px; }
+  .colnav { display: none; gap: 6px; }
+  .colnav button { font-size: 13px; padding: 5px 10px; border-radius: 999px; }
 
-  /* ---------- ruled area ---------- */
-  .ruled {
-    margin: 0 -20px 0 calc(-1 * var(--gutter));
-    border-top: 4px double var(--margin);
+  /* ---------- board ---------- */
+  .board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .col { display: flex; flex-direction: column; min-width: 0; }
+  .col-head {
+    display: flex; align-items: center; gap: 8px; padding: 12px 14px 10px;
+    border-bottom: 1px solid var(--line);
   }
-  ul { list-style: none; margin: 0; padding: 0; }
-  li.task {
-    display: grid; grid-template-columns: var(--gutter) 1fr auto; gap: 0 12px; align-items: start;
-    min-height: calc(var(--line) * 2);
-    padding: 8px 20px 8px 0; border-bottom: 1px solid var(--rule);
+  .col-head h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .col[data-status=doing] .dot { background: var(--accent); }
+  .col[data-status=done] .dot { background: var(--low); }
+  .count {
+    margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; font-variant-numeric: tabular-nums;
   }
-  .check {
-    appearance: none; -webkit-appearance: none; justify-self: center;
-    width: 24px; height: 24px; margin: 6px 0 0; cursor: pointer;
-    border: 2px solid var(--pen); border-radius: 3px; transform: rotate(-3deg);
-    background: transparent center / 26px no-repeat;
+  ul.cards {
+    list-style: none; margin: 0; padding: 10px; display: grid; gap: 8px; align-content: start;
+    min-height: 140px; border-radius: 0 0 8px 8px; transition: background-color .12s;
   }
-  .check:checked {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 13.5l5 5L21 4' fill='none' stroke='%231d3d9c' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  ul.cards.over { background: var(--drop); }
+
+  li.card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .06); display: grid; gap: 6px; min-width: 0;
   }
-  .t-body { min-width: 0; }
-  .t-title { font-family: var(--hand); font-size: 22px; line-height: 1.45; color: var(--pen); overflow-wrap: anywhere; }
-  li.done .t-title {
-    color: var(--pencil);
-    text-decoration: line-through; text-decoration-color: var(--margin); text-decoration-thickness: 2px;
-  }
-  .t-notes { font-family: var(--hand); font-size: 17px; line-height: 1.45; color: var(--pencil); white-space: pre-wrap; overflow-wrap: anywhere; }
-  .meta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 4px; font-size: 12px; color: var(--pencil); }
+  li.card[draggable=true] { cursor: grab; }
+  li.card.dragging { opacity: .45; }
+  .c-title { font-weight: 600; overflow-wrap: anywhere; }
+  .col[data-status=done] .c-title { color: var(--muted); text-decoration: line-through; font-weight: 500; }
+  .c-notes { color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+  .meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted); }
   .pill {
-    font-family: var(--hand); font-weight: 700; font-size: 14px; line-height: 1.3;
-    border: 1.5px solid currentColor; border-radius: 50%; padding: 0 9px; transform: rotate(-2deg);
+    font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+    border: 1px solid currentColor; border-radius: 999px; padding: 0 7px;
   }
   .p-high { color: var(--high); } .p-medium { color: var(--med); } .p-low { color: var(--low); }
   .due { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   .overdue { color: var(--high); font-weight: 500; }
-  .actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; padding-top: 4px; }
-  .actions button { padding: 3px 9px; font-size: 13px; }
+  .c-actions { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; padding-top: 2px; }
+  .c-actions button { padding: 3px 8px; font-size: 12.5px; }
+  .c-actions .spacer { flex: 1; }
+  .move { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); font-weight: 500; }
+  .confirm { font-size: 13px; }
 
-  li.edit-row { padding: 10px 20px 12px var(--gutter); border-bottom: 1px solid var(--rule); }
-  .edit { display: grid; gap: 10px; }
-  .empty {
-    padding: 0 20px 0 var(--gutter); min-height: calc(var(--line) * 2);
-    display: flex; flex-direction: column; justify-content: center;
-    font-family: var(--hand); font-size: 18px; color: var(--pencil); border-bottom: 1px solid var(--rule);
+  form.edit { display: grid; gap: 8px; }
+  form.edit input[type=text] { width: 100%; }
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 8px; border: 1px dashed var(--line); border-radius: 7px; }
+
+  footer { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+  .note { font-size: 13px; color: var(--muted); margin-right: auto; }
+  .note.err { color: var(--high); }
+
+  /* phones: swipe between columns */
+  @media (max-width: 760px) {
+    h1 { font-size: 26px; }
+    .colnav { display: flex; }
+    .board {
+      grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 86%;
+      overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
+      margin-inline: -16px; padding: 0 16px 6px; scroll-padding-inline: 16px;
+    }
+    .col { scroll-snap-align: start; }
   }
-  .empty strong { color: var(--pen); font-size: 21px; font-weight: 400; }
-
-  /* blank ruled lines below the last task */
-  .blank {
-    height: calc(var(--line) * 4);
-    background: repeating-linear-gradient(to bottom, transparent 0 calc(var(--line) - 1px), var(--rule) calc(var(--line) - 1px) var(--line));
-  }
-
-  footer { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; padding-top: 14px; }
-  .note { font-size: 13px; color: var(--pencil); margin-right: auto; }
-  .note.err { color: var(--high); font-weight: 500; }
-
-  @media (max-width: 520px) {
-    :root { --gutter: 52px; --margin-x: 40px; }
-    .binding { padding-left: var(--gutter); }
-    .sheet { padding-right: 14px; }
-    .ruled { margin-right: -14px; }
-    li.task { grid-template-columns: var(--gutter) 1fr; padding-right: 14px; }
-    .actions { grid-column: 2; justify-content: flex-start; }
-    li.edit-row, .empty { padding-right: 14px; }
-    .date { font-size: 20px; }
-  }
+  @media (prefers-reduced-motion: reduce) { ul.cards { transition: none; } }
 </style>
 </head>
 <body>
-<main class="pad">
-  <div class="binding">
-    <h1>Task Notepad</h1>
+<main class="app">
+  <header class="top">
+    <div>
+      <h1>Task Notepad</h1>
+      <div class="sync" id="sync">Loading your tasks…</div>
+    </div>
     <div class="stats" id="stats"></div>
-  </div>
-  <div class="sheet">
-    <div class="head">
-      <div class="dateline">
-        <div class="date" id="today"></div>
-        <div class="sync" id="sync">Loading your tasks…</div>
-      </div>
+  </header>
 
-      <form class="add" id="addForm" autocomplete="off">
-        <input type="text" class="write" id="newTitle" placeholder="What needs doing?" required aria-label="Task">
-        <textarea class="write" id="newNotes" rows="1" placeholder="Notes (optional)" aria-label="Notes"></textarea>
-        <div class="row">
-          <select class="field" id="newPriority" aria-label="Priority">
-            <option value="low">Low priority</option>
-            <option value="medium" selected>Medium priority</option>
-            <option value="high">High priority</option>
-          </select>
-          <input type="date" class="field" id="newDue" aria-label="Due date">
-          <button class="primary" type="submit">Add task</button>
-        </div>
-      </form>
-
-      <div class="toolbar">
-        <div class="tabs" role="group" aria-label="Show">
-          <button type="button" data-filter="all" aria-pressed="true">All</button>
-          <button type="button" data-filter="active" aria-pressed="false">Active</button>
-          <button type="button" data-filter="done" aria-pressed="false">Done</button>
-        </div>
-        <input type="search" class="field" id="search" placeholder="Search tasks" aria-label="Search tasks">
-        <select class="field" id="sort" aria-label="Sort">
-          <option value="created">Newest first</option>
-          <option value="due">Due date</option>
-          <option value="priority">Priority</option>
-        </select>
-      </div>
+  <form class="add panel" id="addForm" autocomplete="off">
+    <div class="row">
+      <input type="text" id="newTitle" placeholder="What needs doing?" required aria-label="Task">
+      <select id="newPriority" aria-label="Priority">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+      </select>
+      <input type="date" id="newDue" aria-label="Due date">
+      <select id="newStatus" aria-label="Column">
+        <option value="todo" selected>To do</option>
+        <option value="doing">In progress</option>
+      </select>
+      <button class="primary" type="submit">Add task</button>
     </div>
+    <textarea id="newNotes" rows="2" placeholder="Notes (optional)" aria-label="Notes"></textarea>
+  </form>
 
-    <div class="ruled">
-      <ul id="list"></ul>
-      <div class="blank" aria-hidden="true"></div>
+  <div class="toolbar">
+    <div class="colnav" role="group" aria-label="Jump to column">
+      <button type="button" data-jump="todo">To do</button>
+      <button type="button" data-jump="doing">In progress</button>
+      <button type="button" data-jump="done">Done</button>
     </div>
-
-    <footer>
-      <span class="note" id="note" role="status"></span>
-      <span id="clearWrap"><button type="button" id="clearDone">Clear completed</button></span>
-      <button type="button" id="exportBtn" hidden>Export</button>
-      <button type="button" id="importBtn">Import</button>
-      <input type="file" id="importFile" accept="application/json,.json" hidden>
-    </footer>
+    <input type="search" id="search" placeholder="Search tasks" aria-label="Search tasks">
+    <select id="sort" aria-label="Sort cards">
+      <option value="created">Newest first</option>
+      <option value="due">Due date</option>
+      <option value="priority">Priority</option>
+    </select>
   </div>
+
+  <div class="board" id="board">
+    <section class="col panel" data-status="todo" id="col-todo">
+      <div class="col-head"><span class="dot"></span><h2>To do</h2><span class="count" id="count-todo">0</span></div>
+      <ul class="cards" data-status="todo"></ul>
+    </section>
+    <section class="col panel" data-status="doing" id="col-doing">
+      <div class="col-head"><span class="dot"></span><h2>In progress</h2><span class="count" id="count-doing">0</span></div>
+      <ul class="cards" data-status="doing"></ul>
+    </section>
+    <section class="col panel" data-status="done" id="col-done">
+      <div class="col-head"><span class="dot"></span><h2>Done</h2><span class="count" id="count-done">0</span></div>
+      <ul class="cards" data-status="done"></ul>
+    </section>
+  </div>
+
+  <footer>
+    <span class="note" id="note" role="status"></span>
+    <span id="clearWrap"></span>
+    <button type="button" id="exportBtn" hidden>Export</button>
+    <button type="button" id="importBtn">Import</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+  </footer>
 </main>
 
 <script>
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
+const COLUMNS = ['todo', 'doing', 'done'];
+const COLUMN_NAME = { todo: 'To do', doing: 'In progress', done: 'Done' };
 const LOCAL_KEY = 'task-notepad.v1';
 const $ = (s) => document.querySelector(s);
 
 let tasks = [];
-let filter = 'all';
 let editingId = null;
 let confirmingId = null;
 let store = null;
@@ -286,13 +258,16 @@ function esc(s) {
 function newId() {
   return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
+// Tasks saved before the board existed only have `done`; they land in To do or Done.
 function clean(t) {
+  const status = COLUMNS.includes(t.status) ? t.status : (t.done ? 'done' : 'todo');
   return {
     title: String(t.title || '').slice(0, 500),
     notes: String(t.notes || '').slice(0, 5000),
     priority: PRIORITY_RANK[t.priority] !== undefined ? t.priority : 'medium',
     due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || '') ? t.due : null,
-    done: !!t.done,
+    status,
+    done: status === 'done',
     created: Number(t.created) || Date.now(),
   };
 }
@@ -310,7 +285,7 @@ function accountStore(db, uid) {
   // One write at a time per task.
   const queued = (id, fn) => (queues[id] = (queues[id] || Promise.resolve()).then(fn, fn));
   return {
-    label: 'Saved to your claude.ai account — open this page on any device to see the same list.',
+    label: 'Saved to your claude.ai account — open this page on any device to see the same board.',
     subscribe(cb, onErr) {
       return col.onSnapshot(
         (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
@@ -348,82 +323,93 @@ async function write(promise, what) {
   try { await promise; }
   catch (e) {
     const code = e && e.code;
-    if (code === 'quota_exceeded') say('Your task list is full. Delete some completed tasks to add more.', true);
+    if (code === 'quota_exceeded') say('Your board is full. Delete some finished tasks to add more.', true);
     else if (code === 'invalid_argument') say(`Couldn't ${what}. You may only have view access to this page.`, true);
     else say(`Couldn't ${what}. Check your connection and try again.`, true);
   }
 }
 
+function moveTask(t, status) {
+  if (!t || t.status === status || !COLUMNS.includes(status)) return;
+  write(store.patch(t.id, { status, done: status === 'done' }), 'move that task');
+}
+
 /* ---------- rendering ---------- */
 
-function visible() {
-  const q = $('#search').value.trim().toLowerCase();
+function sorted(list) {
   const sort = $('#sort').value;
-  return tasks
-    .filter((t) => filter === 'all' || (filter === 'done') === t.done)
-    .filter((t) => !q || (t.title + ' ' + t.notes).toLowerCase().includes(q))
-    .sort((a, b) => {
-      if (sort === 'due') return (a.due || '9999-99-99').localeCompare(b.due || '9999-99-99') || b.created - a.created;
-      if (sort === 'priority') return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || b.created - a.created;
-      return b.created - a.created;
-    });
+  return list.sort((a, b) => {
+    if (sort === 'due') return (a.due || '9999-99-99').localeCompare(b.due || '9999-99-99') || b.created - a.created;
+    if (sort === 'priority') return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || b.created - a.created;
+    return b.created - a.created;
+  });
 }
 
 function render() {
   const t0 = today();
-  const active = tasks.filter((t) => !t.done).length;
-  const overdue = tasks.filter((t) => !t.done && t.due && t.due < t0).length;
+  const q = $('#search').value.trim().toLowerCase();
+  const by = { todo: [], doing: [], done: [] };
+  tasks.forEach((t) => by[t.status].push(t));
+  const overdue = tasks.filter((t) => t.status !== 'done' && t.due && t.due < t0).length;
+
   $('#stats').innerHTML =
-    `<span><b>${active}</b> active</span><span><b>${tasks.length - active}</b> done</span>` +
+    COLUMNS.map((c) => `<span><b>${by[c].length}</b> ${COLUMN_NAME[c].toLowerCase()}</span>`).join('') +
     (overdue ? `<span class="od"><b>${overdue}</b> overdue</span>` : '');
 
-  const doneCount = tasks.length - active;
-  $('#clearWrap').innerHTML = confirmingId === '__clear'
-    ? `Remove ${doneCount} completed? <button type="button" class="danger" data-act="clear-yes">Remove</button> <button type="button" data-act="clear-no">Keep</button>`
-    : `<button type="button" id="clearDone" data-act="clear" ${doneCount ? '' : 'disabled'}>Clear completed</button>`;
-
-  const items = visible();
-  const list = $('#list');
-  if (!items.length) {
-    list.innerHTML = tasks.length
-      ? `<li class="empty"><strong>Nothing matches.</strong>Try another filter or search.</li>`
-      : `<li class="empty"><strong>Nothing on the pad yet.</strong>Write a task above and press Add task.</li>`;
-    return;
+  for (const c of COLUMNS) {
+    $('#count-' + c).textContent = by[c].length;
+    const shown = sorted(by[c].filter((t) => !q || (t.title + ' ' + t.notes).toLowerCase().includes(q)));
+    const ul = document.querySelector(`ul.cards[data-status=${c}]`);
+    if (!shown.length) {
+      const msg = q && by[c].length ? 'No matches here.'
+        : c === 'todo' ? (tasks.length ? 'Nothing waiting. Add a task above.' : 'No tasks yet. Add one above and it lands here.')
+        : c === 'doing' ? 'Drag a card here, or press Start on it.'
+        : 'Finished tasks show up here.';
+      ul.innerHTML = `<li class="empty">${msg}</li>`;
+    } else {
+      ul.innerHTML = shown.map((t) => (t.id === editingId ? editView(t) : cardView(t, t0))).join('');
+    }
   }
-  list.innerHTML = items.map((t) => (t.id === editingId ? editView(t) : taskView(t, t0))).join('');
+
+  const doneCount = by.done.length;
+  $('#clearWrap').innerHTML = confirmingId === '__clear'
+    ? `<span class="confirm">Remove ${doneCount} finished task${doneCount === 1 ? '' : 's'}?</span> <button type="button" class="danger" data-act="clear-yes">Remove</button> <button type="button" data-act="clear-no">Keep</button>`
+    : `<button type="button" data-act="clear" ${doneCount ? '' : 'disabled'}>Clear Done column</button>`;
 }
 
-function taskView(t, t0) {
-  const late = !t.done && t.due && t.due < t0;
+function cardView(t, t0) {
+  const late = t.status !== 'done' && t.due && t.due < t0;
+  const i = COLUMNS.indexOf(t.status);
+  const back = { doing: '← To do', done: '← Reopen' }[t.status];
+  const fwd = { todo: 'Start →', doing: 'Done →' }[t.status];
   const actions = confirmingId === t.id
-    ? `<button type="button" class="danger" data-act="del-yes">Delete</button><button type="button" data-act="del-no">Keep</button>`
-    : `<button type="button" data-act="edit">Edit</button><button type="button" data-act="del" aria-label="Delete task">Delete</button>`;
+    ? `<span class="confirm">Delete this task?</span><span class="spacer"></span><button type="button" class="danger" data-act="del-yes">Delete</button><button type="button" data-act="del-no">Keep</button>`
+    : `${back ? `<button type="button" class="move" data-act="move" data-to="${COLUMNS[i - 1]}">${back}</button>` : ''}` +
+      `${fwd ? `<button type="button" class="move" data-act="move" data-to="${COLUMNS[i + 1]}">${fwd}</button>` : ''}` +
+      `<span class="spacer"></span><button type="button" data-act="edit">Edit</button><button type="button" data-act="del">Delete</button>`;
   return `
-    <li class="task ${t.done ? 'done' : ''}" data-id="${esc(t.id)}">
-      <input type="checkbox" class="check" data-act="toggle" ${t.done ? 'checked' : ''} aria-label="Mark ${esc(t.title)} done">
-      <div class="t-body">
-        <div class="t-title">${esc(t.title)}</div>
-        ${t.notes ? `<div class="t-notes">${esc(t.notes)}</div>` : ''}
-        <div class="meta">
-          <span class="pill p-${t.priority}">${t.priority}</span>
-          ${t.due ? `<span class="due ${late ? 'overdue' : ''}">Due ${fmtDate(t.due)}${late ? ' · overdue' : ''}</span>` : ''}
-        </div>
+    <li class="card" draggable="true" data-id="${esc(t.id)}">
+      <div class="c-title">${esc(t.title)}</div>
+      ${t.notes ? `<div class="c-notes">${esc(t.notes)}</div>` : ''}
+      <div class="meta">
+        <span class="pill p-${t.priority}">${t.priority}</span>
+        ${t.due ? `<span class="due ${late ? 'overdue' : ''}">Due ${fmtDate(t.due)}${late ? ' · overdue' : ''}</span>` : ''}
       </div>
-      <div class="actions">${actions}</div>
+      <div class="c-actions">${actions}</div>
     </li>`;
 }
 
 function editView(t) {
-  const opt = (v) => `<option value="${v}" ${t.priority === v ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)} priority</option>`;
+  const opt = (v) => `<option value="${v}" ${t.priority === v ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)}</option>`;
   return `
-    <li class="edit-row" data-id="${esc(t.id)}">
+    <li class="card" data-id="${esc(t.id)}">
       <form class="edit" id="editForm">
-        <input type="text" class="write" id="editTitle" name="title" value="${esc(t.title)}" required aria-label="Task">
-        <textarea class="write" id="editNotes" name="notes" rows="2" placeholder="Notes (optional)" aria-label="Notes">${esc(t.notes)}</textarea>
+        <input type="text" id="editTitle" name="title" value="${esc(t.title)}" required aria-label="Task">
         <div class="row">
-          <select class="field" id="editPriority" name="priority" aria-label="Priority">${opt('low')}${opt('medium')}${opt('high')}</select>
-          <input type="date" class="field" id="editDue" name="due" value="${t.due || ''}" aria-label="Due date">
+          <select id="editPriority" name="priority" aria-label="Priority">${opt('low')}${opt('medium')}${opt('high')}</select>
+          <input type="date" id="editDue" name="due" value="${t.due || ''}" aria-label="Due date">
         </div>
+        <textarea id="editNotes" name="notes" rows="3" placeholder="Notes (optional)" aria-label="Notes">${esc(t.notes)}</textarea>
         <div class="row">
           <button class="primary" type="submit">Save</button>
           <button type="button" data-act="cancel">Cancel</button>
@@ -440,7 +426,7 @@ $('#addForm').addEventListener('submit', (e) => {
   if (!title || !store) return;
   const t = clean({
     title, notes: $('#newNotes').value.trim(), priority: $('#newPriority').value,
-    due: $('#newDue').value, done: false, created: Date.now(),
+    due: $('#newDue').value, status: $('#newStatus').value, created: Date.now(),
   });
   e.target.reset();
   $('#newTitle').focus();
@@ -449,12 +435,16 @@ $('#addForm').addEventListener('submit', (e) => {
 });
 
 document.addEventListener('click', (e) => {
-  const act = e.target.dataset && e.target.dataset.act;
-  if (!act) return;
-  const li = e.target.closest('[data-id]');
+  const el = e.target.closest('[data-act], [data-jump]');
+  if (!el) return;
+  if (el.dataset.jump) {
+    $('#col-' + el.dataset.jump).scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    return;
+  }
+  const li = el.closest('[data-id]');
   const t = li && tasks.find((x) => x.id === li.dataset.id);
-  switch (act) {
-    case 'toggle': write(store.patch(t.id, { done: e.target.checked }), 'update that task'); break;
+  switch (el.dataset.act) {
+    case 'move': moveTask(t, el.dataset.to); break;
     case 'edit': editingId = t.id; confirmingId = null; render(); $('#editTitle').focus(); break;
     case 'cancel': editingId = null; render(); break;
     case 'del': confirmingId = t.id; render(); break;
@@ -464,13 +454,13 @@ document.addEventListener('click', (e) => {
     case 'clear-no': confirmingId = null; render(); break;
     case 'clear-yes':
       confirmingId = null;
-      tasks.filter((x) => x.done).forEach((x) => write(store.remove(x.id), 'clear completed tasks'));
+      tasks.filter((x) => x.status === 'done').forEach((x) => write(store.remove(x.id), 'clear the Done column'));
       render();
       break;
   }
 });
 
-$('#list').addEventListener('submit', (e) => {
+$('#board').addEventListener('submit', (e) => {
   e.preventDefault();
   const f = e.target;
   const t = tasks.find((x) => x.id === editingId);
@@ -484,11 +474,41 @@ $('#list').addEventListener('submit', (e) => {
   write(store.patch(t.id, patch), 'save your changes');
 });
 
-document.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => {
-  filter = b.dataset.filter;
-  document.querySelectorAll('[data-filter]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-  render();
-}));
+// Drag cards between columns (mouse and trackpad; on phones use the Start / Done buttons).
+let dragId = null;
+const board = $('#board');
+board.addEventListener('dragstart', (e) => {
+  const li = e.target.closest('li.card[draggable=true]');
+  if (!li) return;
+  dragId = li.dataset.id;
+  li.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', dragId); } catch {}
+});
+board.addEventListener('dragend', () => {
+  dragId = null;
+  document.querySelectorAll('.dragging, .over').forEach((el) => el.classList.remove('dragging', 'over'));
+});
+board.addEventListener('dragover', (e) => {
+  const ul = e.target.closest('ul.cards');
+  if (!ul || !dragId) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('ul.cards.over').forEach((x) => x !== ul && x.classList.remove('over'));
+  ul.classList.add('over');
+});
+board.addEventListener('dragleave', (e) => {
+  const ul = e.target.closest('ul.cards');
+  if (ul && !ul.contains(e.relatedTarget)) ul.classList.remove('over');
+});
+board.addEventListener('drop', (e) => {
+  const ul = e.target.closest('ul.cards');
+  if (!ul || !dragId) return;
+  e.preventDefault();
+  ul.classList.remove('over');
+  moveTask(tasks.find((x) => x.id === dragId), ul.dataset.status);
+});
+
 $('#search').addEventListener('input', render);
 $('#sort').addEventListener('change', render);
 
@@ -506,7 +526,7 @@ $('#importFile').addEventListener('change', async (e) => {
       const id = typeof t.id === 'string' && /^[A-Za-z0-9_.~:@+-]{1,100}$/.test(t.id) && t.id !== '.' && t.id !== '..' ? t.id : newId();
       await write(store.put(id, clean(t)), 'import tasks');
     }
-    say(fresh.length ? `Imported ${fresh.length} task${fresh.length > 1 ? 's' : ''}.` : 'Those tasks are already in your list.');
+    say(fresh.length ? `Imported ${fresh.length} task${fresh.length > 1 ? 's' : ''}.` : 'Those tasks are already on your board.');
   } catch {
     say('That file isn\'t a Task Notepad export. Choose a .json file made with Export.', true);
   }
@@ -527,7 +547,6 @@ function start(s) {
   );
 }
 
-$('#today').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 render();
 (async () => {
   const cl = window.claude;
@@ -542,7 +561,7 @@ render();
     const btn = $('#exportBtn');
     btn.hidden = false;
     btn.addEventListener('click', async () => {
-      const data = tasks.map(({ id, title, notes, priority, due, done, created }) => ({ id, title, notes, priority, due, done, created }));
+      const data = tasks.map(({ id, title, notes, priority, due, status, done, created }) => ({ id, title, notes, priority, due, status, done, created }));
       const filename = `tasks-${today()}.json`;
       const json = JSON.stringify(data, null, 2);
       if (downloads) {

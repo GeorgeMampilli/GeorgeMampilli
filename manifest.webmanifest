@@ -1,14 +1,14 @@
 {
   "name": "Task Notepad",
   "short_name": "Tasks",
-  "description": "A notepad for keeping track of tasks, with notes, priorities and due dates.",
+  "description": "A Kanban board for your tasks: To do, In progress and Done, with notes, priorities and due dates.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#fcf18f",
-  "theme_color": "#6c1d22",
+  "orientation": "any",
+  "background_color": "#e9ecef",
+  "theme_color": "#e9ecef",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
