@@ -1,7 +1,7 @@
 {
   "name": "Task Notepad",
   "short_name": "Tasks",
-  "description": "A Kanban board for your tasks: To do, In progress and Done, with notes, priorities and due dates.",
+  "description": "Track job applications on a board (Reverts, Interview Round 1, Interview Round 2, Rejections) or as a checklist.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

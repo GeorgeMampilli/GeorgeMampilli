@@ -16,8 +16,9 @@
 <style>
   body { margin: 0; }
   [hidden] { display: none !important; }
-  /* Layout: a Kanban board on a desk — header and add form on top, then three paper columns
-     (To do, In progress, Done) holding task cards. On phones the columns become a swipeable row. */
+  /* Layout: a slim view switcher on the left (Board / List), and the workspace beside it — header,
+     add form, toolbar, then either four paper columns of cards or one ruled list. On phones the
+     board's columns become a swipeable row. */
   :root {
     --desk: #e9ecef;
     --paper: #fbf8e9;
@@ -26,9 +27,10 @@
     --muted: #64707d;
     --accent: #2457c5;
     --accent-ink: #ffffff;
+    --accent-soft: #dfe8fb;
     --field: #ffffff;
     --line: #d6d9d2;
-    --drop: #dfe8fb;
+    --rule: #c9d8ea;
     --high: #c23a31;
     --med: #b0700c;
     --low: #2f8551;
@@ -39,14 +41,14 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --desk: #11151b; --paper: #1a2029; --card: #232b36; --ink: #e7ebf0; --muted: #94a0ae;
-      --accent: #7ea3ff; --accent-ink: #0d1422; --field: #222a35; --line: #313b49; --drop: #23324d;
+      --accent: #7ea3ff; --accent-ink: #0d1422; --accent-soft: #23324d; --field: #222a35; --line: #313b49; --rule: #263142;
       --high: #ff8278; --med: #f0b24a; --low: #6fd093;
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --desk: #11151b; --paper: #1a2029; --card: #232b36; --ink: #e7ebf0; --muted: #94a0ae;
-    --accent: #7ea3ff; --accent-ink: #0d1422; --field: #222a35; --line: #313b49; --drop: #23324d;
+    --accent: #7ea3ff; --accent-ink: #0d1422; --accent-soft: #23324d; --field: #222a35; --line: #313b49; --rule: #263142;
     --high: #ff8278; --med: #f0b24a; --low: #6fd093;
     color-scheme: dark;
   }
@@ -62,7 +64,24 @@
   button, input, select, textarea { font: inherit; color: inherit; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .app { max-width: 1180px; margin: 0 auto; display: grid; gap: 18px; }
+  .shell { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 20px; align-items: start; }
+
+  /* ---------- view switcher ---------- */
+  .rail {
+    position: sticky; top: max(24px, env(safe-area-inset-top, 0px));
+    display: grid; gap: 6px; padding: 8px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+  }
+  .rail button {
+    display: grid; justify-items: center; gap: 4px; padding: 10px 4px 8px;
+    border: 0; border-radius: 8px; background: transparent; color: var(--muted);
+    font-size: 12px; font-weight: 500; cursor: pointer;
+  }
+  .rail button:hover { color: var(--ink); }
+  .rail button[aria-pressed=true] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .rail svg { width: 24px; height: 24px; }
+
+  .app { display: grid; gap: 18px; min-width: 0; }
 
   header.top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
   h1 {
@@ -70,7 +89,7 @@
     letter-spacing: -.01em; margin: 0; text-wrap: balance;
   }
   .sync { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .stats { display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stats { display: flex; gap: 6px 14px; flex-wrap: wrap; font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .stats b { color: var(--ink); font-weight: 500; }
   .stats .od b { color: var(--high); }
 
@@ -98,20 +117,25 @@
 
   .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .toolbar input[type=search] { flex: 1 1 180px; }
-  .colnav { display: none; gap: 6px; }
+  .tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .tabs button { border: 0; border-radius: 0; padding: 7px 12px; }
+  .tabs button + button { border-left: 1px solid var(--line); }
+  .tabs button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
+  .colnav { display: none; gap: 6px; flex-wrap: wrap; }
   .colnav button { font-size: 13px; padding: 5px 10px; border-radius: 999px; }
 
+  /* stage colors: shared by column dots and the stage chip in the list */
+  [data-stage=reverts] { --stage: var(--accent); }
+  [data-stage=round1] { --stage: var(--med); }
+  [data-stage=round2] { --stage: var(--low); }
+  [data-stage=rejected] { --stage: var(--high); }
+
   /* ---------- board ---------- */
-  .board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
   .col { display: flex; flex-direction: column; min-width: 0; }
-  .col-head {
-    display: flex; align-items: center; gap: 8px; padding: 12px 14px 10px;
-    border-bottom: 1px solid var(--line);
-  }
-  .col-head h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
-  .col[data-status=doing] .dot { background: var(--accent); }
-  .col[data-status=done] .dot { background: var(--low); }
+  .col-head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 10px; border-bottom: 1px solid var(--line); }
+  .col-head h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 16px; line-height: 1.2; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--stage); flex: none; }
   .count {
     margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted);
     border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; font-variant-numeric: tabular-nums;
@@ -120,7 +144,7 @@
     list-style: none; margin: 0; padding: 10px; display: grid; gap: 8px; align-content: start;
     min-height: 140px; border-radius: 0 0 8px 8px; transition: background-color .12s;
   }
-  ul.cards.over { background: var(--drop); }
+  ul.cards.over { background: var(--accent-soft); }
 
   li.card {
     background: var(--card); border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px;
@@ -128,122 +152,164 @@
   }
   li.card[draggable=true] { cursor: grab; }
   li.card.dragging { opacity: .45; }
-  .c-title { font-weight: 600; overflow-wrap: anywhere; }
-  .col[data-status=done] .c-title { color: var(--muted); text-decoration: line-through; font-weight: 500; }
+  .c-head { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; }
+  .c-head .check { margin-top: 3px; }
   .c-notes { color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
-  .meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted); }
+  .c-actions { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; padding-top: 2px; }
+  .c-actions button { padding: 3px 8px; font-size: 12.5px; }
+  .c-actions .spacer { flex: 1; }
+  .move-sel { font-size: 12.5px; padding: 3px 6px; flex: 1 1 110px; min-width: 0; }
+
+  /* ---------- list ---------- */
+  .list-panel { padding: 4px 16px; }
+  ul.list { list-style: none; margin: 0; padding: 0; }
+  li.task {
+    display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: start;
+    padding: 12px 0; border-bottom: 1px solid var(--rule);
+  }
+  li.task:last-child { border-bottom: 0; }
+
+  /* ---------- shared item parts ---------- */
+  .check { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
+  .t-title { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+  .is-done .t-title { text-decoration: line-through; color: var(--muted); font-weight: 500; }
+  .t-notes { color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }
+  .meta { display: flex; gap: 6px 10px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted); margin-top: 2px; }
   .pill {
     font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
     border: 1px solid currentColor; border-radius: 999px; padding: 0 7px;
   }
   .p-high { color: var(--high); } .p-medium { color: var(--med); } .p-low { color: var(--low); }
+  .stage-chip { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); }
+  .stage-chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--stage); }
   .due { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   .overdue { color: var(--high); font-weight: 500; }
-  .c-actions { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; padding-top: 2px; }
-  .c-actions button { padding: 3px 8px; font-size: 12.5px; }
-  .c-actions .spacer { flex: 1; }
-  .move { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); font-weight: 500; }
+  .actions { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  .actions button { padding: 4px 9px; font-size: 13px; }
   .confirm { font-size: 13px; }
-
   form.edit { display: grid; gap: 8px; }
   form.edit input[type=text] { width: 100%; }
+  li.edit-row { padding: 12px 0; border-bottom: 1px solid var(--rule); }
   .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 8px; border: 1px dashed var(--line); border-radius: 7px; }
+  ul.list .empty { border: 0; padding: 28px 0; font-size: 14px; }
 
   footer { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
   .note { font-size: 13px; color: var(--muted); margin-right: auto; }
   .note.err { color: var(--high); }
 
-  /* phones: swipe between columns */
+  @media (max-width: 1080px) and (min-width: 761px) {
+    .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   @media (max-width: 760px) {
-    h1 { font-size: 26px; }
+    .shell { grid-template-columns: 60px minmax(0, 1fr); gap: 10px; }
+    .rail { padding: 5px; }
+    .rail button { padding: 8px 2px 6px; font-size: 11px; }
+    .rail svg { width: 22px; height: 22px; }
+    h1 { font-size: 24px; }
     .colnav { display: flex; }
     .board {
-      grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 86%;
+      grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 88%;
       overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
-      margin-inline: -16px; padding: 0 16px 6px; scroll-padding-inline: 16px;
+      margin-right: -16px; padding: 0 16px 6px 0;
     }
     .col { scroll-snap-align: start; }
+    .list-panel { padding: 4px 12px; }
+    li.task { grid-template-columns: 22px 1fr; }
+    li.task .actions { grid-column: 2; justify-content: flex-start; }
   }
   @media (prefers-reduced-motion: reduce) { ul.cards { transition: none; } }
 </style>
 </head>
 <body>
-<main class="app">
-  <header class="top">
-    <div>
-      <h1>Task Notepad</h1>
-      <div class="sync" id="sync">Loading your tasks…</div>
-    </div>
-    <div class="stats" id="stats"></div>
-  </header>
+<div class="shell">
+  <nav class="rail" aria-label="Switch view">
+    <button type="button" data-view="board" aria-pressed="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="9.5" y="4" width="5" height="11" rx="1.5"/><rect x="16" y="4" width="5" height="7" rx="1.5"/></svg>
+      <span>Board</span>
+    </button>
+    <button type="button" data-view="list" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="4" height="4" rx="1"/><path d="M10 6.5h11"/><rect x="3" y="10" width="4" height="4" rx="1"/><path d="M10 12h11"/><rect x="3" y="15.5" width="4" height="4" rx="1"/><path d="M10 17.5h11"/></svg>
+      <span>List</span>
+    </button>
+  </nav>
 
-  <form class="add panel" id="addForm" autocomplete="off">
-    <div class="row">
-      <input type="text" id="newTitle" placeholder="What needs doing?" required aria-label="Task">
-      <select id="newPriority" aria-label="Priority">
-        <option value="low">Low</option>
-        <option value="medium" selected>Medium</option>
-        <option value="high">High</option>
+  <main class="app">
+    <header class="top">
+      <div>
+        <h1>Task Notepad</h1>
+        <div class="sync" id="sync">Loading your tasks…</div>
+      </div>
+      <div class="stats" id="stats"></div>
+    </header>
+
+    <form class="add panel" id="addForm" autocomplete="off">
+      <div class="row">
+        <input type="text" id="newTitle" placeholder="Company and role, or any task" required aria-label="Task">
+        <select id="newStage" aria-label="Column">
+          <option value="reverts" selected>Reverts</option>
+          <option value="round1">Interview Round 1</option>
+          <option value="round2">Interview Round 2</option>
+          <option value="rejected">Rejections</option>
+        </select>
+        <select id="newPriority" aria-label="Priority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+        <input type="date" id="newDue" aria-label="Due date">
+        <button class="primary" type="submit">Add</button>
+      </div>
+      <textarea id="newNotes" rows="2" placeholder="Notes (optional)" aria-label="Notes"></textarea>
+    </form>
+
+    <div class="toolbar">
+      <div class="colnav" id="colnav" role="group" aria-label="Jump to column"></div>
+      <div class="tabs" id="tabs" role="group" aria-label="Show" hidden>
+        <button type="button" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-filter="active" aria-pressed="false">Active</button>
+        <button type="button" data-filter="done" aria-pressed="false">Done</button>
+      </div>
+      <input type="search" id="search" placeholder="Search" aria-label="Search">
+      <select id="sort" aria-label="Sort">
+        <option value="created">Newest first</option>
+        <option value="due">Due date</option>
+        <option value="priority">Priority</option>
       </select>
-      <input type="date" id="newDue" aria-label="Due date">
-      <select id="newStatus" aria-label="Column">
-        <option value="todo" selected>To do</option>
-        <option value="doing">In progress</option>
-      </select>
-      <button class="primary" type="submit">Add task</button>
     </div>
-    <textarea id="newNotes" rows="2" placeholder="Notes (optional)" aria-label="Notes"></textarea>
-  </form>
 
-  <div class="toolbar">
-    <div class="colnav" role="group" aria-label="Jump to column">
-      <button type="button" data-jump="todo">To do</button>
-      <button type="button" data-jump="doing">In progress</button>
-      <button type="button" data-jump="done">Done</button>
+    <div class="board" id="boardView"></div>
+
+    <div class="list-panel panel" id="listView" hidden>
+      <ul class="list" id="list"></ul>
     </div>
-    <input type="search" id="search" placeholder="Search tasks" aria-label="Search tasks">
-    <select id="sort" aria-label="Sort cards">
-      <option value="created">Newest first</option>
-      <option value="due">Due date</option>
-      <option value="priority">Priority</option>
-    </select>
-  </div>
 
-  <div class="board" id="board">
-    <section class="col panel" data-status="todo" id="col-todo">
-      <div class="col-head"><span class="dot"></span><h2>To do</h2><span class="count" id="count-todo">0</span></div>
-      <ul class="cards" data-status="todo"></ul>
-    </section>
-    <section class="col panel" data-status="doing" id="col-doing">
-      <div class="col-head"><span class="dot"></span><h2>In progress</h2><span class="count" id="count-doing">0</span></div>
-      <ul class="cards" data-status="doing"></ul>
-    </section>
-    <section class="col panel" data-status="done" id="col-done">
-      <div class="col-head"><span class="dot"></span><h2>Done</h2><span class="count" id="count-done">0</span></div>
-      <ul class="cards" data-status="done"></ul>
-    </section>
-  </div>
-
-  <footer>
-    <span class="note" id="note" role="status"></span>
-    <span id="clearWrap"></span>
-    <button type="button" id="exportBtn" hidden>Export</button>
-    <button type="button" id="importBtn">Import</button>
-    <input type="file" id="importFile" accept="application/json,.json" hidden>
-  </footer>
-</main>
+    <footer>
+      <span class="note" id="note" role="status"></span>
+      <span id="clearWrap"></span>
+      <button type="button" id="exportBtn" hidden>Export</button>
+      <button type="button" id="importBtn">Import</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </footer>
+  </main>
+</div>
 
 <script>
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
-const COLUMNS = ['todo', 'doing', 'done'];
-const COLUMN_NAME = { todo: 'To do', doing: 'In progress', done: 'Done' };
+const STAGES = ['reverts', 'round1', 'round2', 'rejected'];
+const STAGE_NAME = { reverts: 'Reverts', round1: 'Interview Round 1', round2: 'Interview Round 2', rejected: 'Rejections' };
+const STAGE_SHORT = { reverts: 'reverts', round1: 'round 1', round2: 'round 2', rejected: 'rejections' };
 const LOCAL_KEY = 'task-notepad.v1';
+const VIEW_KEY = 'task-notepad.view';
 const $ = (s) => document.querySelector(s);
 
 let tasks = [];
+let view = 'board';
+let filter = 'all';
 let editingId = null;
 let confirmingId = null;
 let store = null;
+
+try { if (['board', 'list'].includes(localStorage.getItem(VIEW_KEY))) view = localStorage.getItem(VIEW_KEY); } catch {}
 
 function today() {
   const d = new Date();
@@ -258,16 +324,16 @@ function esc(s) {
 function newId() {
   return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
-// Tasks saved before the board existed only have `done`; they land in To do or Done.
+// Every task has a board column (`stage`) and a done tick for the list. Tasks saved before the
+// four columns existed start in Reverts and keep their done state.
 function clean(t) {
-  const status = COLUMNS.includes(t.status) ? t.status : (t.done ? 'done' : 'todo');
   return {
     title: String(t.title || '').slice(0, 500),
     notes: String(t.notes || '').slice(0, 5000),
     priority: PRIORITY_RANK[t.priority] !== undefined ? t.priority : 'medium',
     due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || '') ? t.due : null,
-    status,
-    done: status === 'done',
+    stage: STAGES.includes(t.stage) ? t.stage : 'reverts',
+    done: !!t.done || t.status === 'done',
     created: Number(t.created) || Date.now(),
   };
 }
@@ -285,7 +351,7 @@ function accountStore(db, uid) {
   // One write at a time per task.
   const queued = (id, fn) => (queues[id] = (queues[id] || Promise.resolve()).then(fn, fn));
   return {
-    label: 'Saved to your claude.ai account — open this page on any device to see the same board.',
+    label: 'Saved to your claude.ai account — open this page on any device to see the same tasks.',
     subscribe(cb, onErr) {
       return col.onSnapshot(
         (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
@@ -323,19 +389,23 @@ async function write(promise, what) {
   try { await promise; }
   catch (e) {
     const code = e && e.code;
-    if (code === 'quota_exceeded') say('Your board is full. Delete some finished tasks to add more.', true);
+    if (code === 'quota_exceeded') say('You have too many tasks saved. Delete some finished ones to add more.', true);
     else if (code === 'invalid_argument') say(`Couldn't ${what}. You may only have view access to this page.`, true);
     else say(`Couldn't ${what}. Check your connection and try again.`, true);
   }
 }
 
-function moveTask(t, status) {
-  if (!t || t.status === status || !COLUMNS.includes(status)) return;
-  write(store.patch(t.id, { status, done: status === 'done' }), 'move that task');
+function moveTask(t, stage) {
+  if (!t || t.stage === stage || !STAGES.includes(stage)) return;
+  write(store.patch(t.id, { stage }), 'move that task');
 }
 
 /* ---------- rendering ---------- */
 
+function matches(t) {
+  const q = $('#search').value.trim().toLowerCase();
+  return !q || (t.title + ' ' + t.notes).toLowerCase().includes(q);
+}
 function sorted(list) {
   const sort = $('#sort').value;
   return list.sort((a, b) => {
@@ -344,68 +414,111 @@ function sorted(list) {
     return b.created - a.created;
   });
 }
+function metaHtml(t, t0, withStage) {
+  const late = !t.done && t.due && t.due < t0;
+  return `<div class="meta">
+      ${withStage ? `<span class="stage-chip" data-stage="${t.stage}">${STAGE_NAME[t.stage]}</span>` : ''}
+      <span class="pill p-${t.priority}">${t.priority}</span>
+      ${t.due ? `<span class="due ${late ? 'overdue' : ''}">Due ${fmtDate(t.due)}${late ? ' · overdue' : ''}</span>` : ''}
+    </div>`;
+}
+function itemActions(t) {
+  return confirmingId === t.id
+    ? `<span class="confirm">Delete this task?</span><button type="button" class="danger" data-act="del-yes">Delete</button><button type="button" data-act="del-no">Keep</button>`
+    : `<button type="button" data-act="edit">Edit</button><button type="button" data-act="del">Delete</button>`;
+}
 
 function render() {
   const t0 = today();
-  const q = $('#search').value.trim().toLowerCase();
-  const by = { todo: [], doing: [], done: [] };
-  tasks.forEach((t) => by[t.status].push(t));
-  const overdue = tasks.filter((t) => t.status !== 'done' && t.due && t.due < t0).length;
+  document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+  $('#boardView').hidden = view !== 'board';
+  $('#listView').hidden = view !== 'list';
+  $('#tabs').hidden = view !== 'list';
+  $('#colnav').hidden = view !== 'board';
 
-  $('#stats').innerHTML =
-    COLUMNS.map((c) => `<span><b>${by[c].length}</b> ${COLUMN_NAME[c].toLowerCase()}</span>`).join('') +
-    (overdue ? `<span class="od"><b>${overdue}</b> overdue</span>` : '');
-
-  for (const c of COLUMNS) {
-    $('#count-' + c).textContent = by[c].length;
-    const shown = sorted(by[c].filter((t) => !q || (t.title + ' ' + t.notes).toLowerCase().includes(q)));
-    const ul = document.querySelector(`ul.cards[data-status=${c}]`);
-    if (!shown.length) {
-      const msg = q && by[c].length ? 'No matches here.'
-        : c === 'todo' ? (tasks.length ? 'Nothing waiting. Add a task above.' : 'No tasks yet. Add one above and it lands here.')
-        : c === 'doing' ? 'Drag a card here, or press Start on it.'
-        : 'Finished tasks show up here.';
-      ul.innerHTML = `<li class="empty">${msg}</li>`;
-    } else {
-      ul.innerHTML = shown.map((t) => (t.id === editingId ? editView(t) : cardView(t, t0))).join('');
-    }
+  const overdue = tasks.filter((t) => !t.done && t.due && t.due < t0).length;
+  const od = overdue ? `<span class="od"><b>${overdue}</b> overdue</span>` : '';
+  if (view === 'board') {
+    $('#stats').innerHTML = STAGES.map((s) => `<span><b>${tasks.filter((t) => t.stage === s).length}</b> ${STAGE_SHORT[s]}</span>`).join('') + od;
+    renderBoard(t0);
+  } else {
+    const active = tasks.filter((t) => !t.done).length;
+    $('#stats').innerHTML = `<span><b>${active}</b> active</span><span><b>${tasks.length - active}</b> done</span>` + od;
+    renderList(t0);
   }
 
-  const doneCount = by.done.length;
+  const doneCount = tasks.filter((t) => t.done).length;
   $('#clearWrap').innerHTML = confirmingId === '__clear'
-    ? `<span class="confirm">Remove ${doneCount} finished task${doneCount === 1 ? '' : 's'}?</span> <button type="button" class="danger" data-act="clear-yes">Remove</button> <button type="button" data-act="clear-no">Keep</button>`
-    : `<button type="button" data-act="clear" ${doneCount ? '' : 'disabled'}>Clear Done column</button>`;
+    ? `<span class="confirm">Remove ${doneCount} completed task${doneCount === 1 ? '' : 's'}?</span> <button type="button" class="danger" data-act="clear-yes">Remove</button> <button type="button" data-act="clear-no">Keep</button>`
+    : `<button type="button" data-act="clear" ${doneCount ? '' : 'disabled'}>Clear completed</button>`;
+}
+
+function renderBoard(t0) {
+  const board = $('#boardView');
+  if (!board.children.length) {
+    board.innerHTML = STAGES.map((s) => `
+      <section class="col panel" id="col-${s}" data-stage="${s}">
+        <div class="col-head"><span class="dot"></span><h2>${STAGE_NAME[s]}</h2><span class="count" id="count-${s}">0</span></div>
+        <ul class="cards" data-stage="${s}"></ul>
+      </section>`).join('');
+    $('#colnav').innerHTML = STAGES.map((s) => `<button type="button" data-jump="${s}">${STAGE_NAME[s]}</button>`).join('');
+  }
+  for (const s of STAGES) {
+    const all = tasks.filter((t) => t.stage === s);
+    $('#count-' + s).textContent = all.length;
+    const shown = sorted(all.filter(matches));
+    const ul = board.querySelector(`ul.cards[data-stage=${s}]`);
+    ul.innerHTML = shown.length
+      ? shown.map((t) => (t.id === editingId ? editView(t, 'card') : cardView(t, t0))).join('')
+      : `<li class="empty">${all.length ? 'No matches here.' : (s === 'reverts' && !tasks.length ? 'Add one above and it lands here.' : 'Drag a card here, or use Move to on a card.')}</li>`;
+  }
 }
 
 function cardView(t, t0) {
-  const late = t.status !== 'done' && t.due && t.due < t0;
-  const i = COLUMNS.indexOf(t.status);
-  const back = { doing: '← To do', done: '← Reopen' }[t.status];
-  const fwd = { todo: 'Start →', doing: 'Done →' }[t.status];
+  const opts = STAGES.map((s) => `<option value="${s}" ${s === t.stage ? 'selected' : ''}>${STAGE_NAME[s]}</option>`).join('');
   const actions = confirmingId === t.id
-    ? `<span class="confirm">Delete this task?</span><span class="spacer"></span><button type="button" class="danger" data-act="del-yes">Delete</button><button type="button" data-act="del-no">Keep</button>`
-    : `${back ? `<button type="button" class="move" data-act="move" data-to="${COLUMNS[i - 1]}">${back}</button>` : ''}` +
-      `${fwd ? `<button type="button" class="move" data-act="move" data-to="${COLUMNS[i + 1]}">${fwd}</button>` : ''}` +
-      `<span class="spacer"></span><button type="button" data-act="edit">Edit</button><button type="button" data-act="del">Delete</button>`;
+    ? itemActions(t)
+    : `<select class="move-sel" data-act="stage" aria-label="Move to column" title="Move to column">${opts}</select>${itemActions(t)}`;
   return `
-    <li class="card" draggable="true" data-id="${esc(t.id)}">
-      <div class="c-title">${esc(t.title)}</div>
-      ${t.notes ? `<div class="c-notes">${esc(t.notes)}</div>` : ''}
-      <div class="meta">
-        <span class="pill p-${t.priority}">${t.priority}</span>
-        ${t.due ? `<span class="due ${late ? 'overdue' : ''}">Due ${fmtDate(t.due)}${late ? ' · overdue' : ''}</span>` : ''}
+    <li class="card ${t.done ? 'is-done' : ''}" draggable="true" data-id="${esc(t.id)}">
+      <div class="c-head">
+        <input type="checkbox" class="check" data-act="toggle" ${t.done ? 'checked' : ''} aria-label="Mark ${esc(t.title)} done">
+        <div class="t-title">${esc(t.title)}</div>
       </div>
+      ${t.notes ? `<div class="c-notes">${esc(t.notes)}</div>` : ''}
+      ${metaHtml(t, t0, false)}
       <div class="c-actions">${actions}</div>
     </li>`;
 }
 
-function editView(t) {
+function renderList(t0) {
+  const list = $('#list');
+  const items = sorted(tasks.filter((t) => filter === 'all' || (filter === 'done') === t.done).filter(matches));
+  if (!items.length) {
+    list.innerHTML = `<li class="empty">${tasks.length ? 'Nothing matches. Try another filter or search.' : 'No tasks yet. Add one above.'}</li>`;
+    return;
+  }
+  list.innerHTML = items.map((t) => (t.id === editingId ? editView(t, 'row') : `
+    <li class="task ${t.done ? 'is-done' : ''}" data-id="${esc(t.id)}">
+      <input type="checkbox" class="check" data-act="toggle" ${t.done ? 'checked' : ''} aria-label="Mark ${esc(t.title)} done">
+      <div>
+        <div class="t-title">${esc(t.title)}</div>
+        ${t.notes ? `<div class="t-notes">${esc(t.notes)}</div>` : ''}
+        ${metaHtml(t, t0, true)}
+      </div>
+      <div class="actions">${itemActions(t)}</div>
+    </li>`)).join('');
+}
+
+function editView(t, kind) {
   const opt = (v) => `<option value="${v}" ${t.priority === v ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)}</option>`;
+  const stageOpts = STAGES.map((s) => `<option value="${s}" ${s === t.stage ? 'selected' : ''}>${STAGE_NAME[s]}</option>`).join('');
   return `
-    <li class="card" data-id="${esc(t.id)}">
+    <li class="${kind === 'card' ? 'card' : 'edit-row'}" data-id="${esc(t.id)}">
       <form class="edit" id="editForm">
         <input type="text" id="editTitle" name="title" value="${esc(t.title)}" required aria-label="Task">
         <div class="row">
+          <select id="editStage" name="stage" aria-label="Column">${stageOpts}</select>
           <select id="editPriority" name="priority" aria-label="Priority">${opt('low')}${opt('medium')}${opt('high')}</select>
           <input type="date" id="editDue" name="due" value="${t.due || ''}" aria-label="Due date">
         </div>
@@ -424,19 +537,34 @@ $('#addForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const title = $('#newTitle').value.trim();
   if (!title || !store) return;
+  const stage = $('#newStage').value;
   const t = clean({
     title, notes: $('#newNotes').value.trim(), priority: $('#newPriority').value,
-    due: $('#newDue').value, status: $('#newStatus').value, created: Date.now(),
+    due: $('#newDue').value, stage, done: false, created: Date.now(),
   });
   e.target.reset();
+  $('#newStage').value = stage;  // keep adding to the same column
   $('#newTitle').focus();
   say('');
   write(store.put(newId(), t), 'add that task');
 });
 
 document.addEventListener('click', (e) => {
-  const el = e.target.closest('[data-act], [data-jump]');
+  const el = e.target.closest('[data-act], [data-jump], [data-view], [data-filter]');
   if (!el) return;
+  if (el.dataset.view) {
+    view = el.dataset.view;
+    editingId = null; confirmingId = null;
+    try { localStorage.setItem(VIEW_KEY, view); } catch {}
+    render();
+    return;
+  }
+  if (el.dataset.filter) {
+    filter = el.dataset.filter;
+    document.querySelectorAll('[data-filter]').forEach((x) => x.setAttribute('aria-pressed', String(x === el)));
+    render();
+    return;
+  }
   if (el.dataset.jump) {
     $('#col-' + el.dataset.jump).scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
     return;
@@ -444,7 +572,7 @@ document.addEventListener('click', (e) => {
   const li = el.closest('[data-id]');
   const t = li && tasks.find((x) => x.id === li.dataset.id);
   switch (el.dataset.act) {
-    case 'move': moveTask(t, el.dataset.to); break;
+    case 'toggle': write(store.patch(t.id, { done: el.checked }), 'update that task'); break;
     case 'edit': editingId = t.id; confirmingId = null; render(); $('#editTitle').focus(); break;
     case 'cancel': editingId = null; render(); break;
     case 'del': confirmingId = t.id; render(); break;
@@ -454,19 +582,27 @@ document.addEventListener('click', (e) => {
     case 'clear-no': confirmingId = null; render(); break;
     case 'clear-yes':
       confirmingId = null;
-      tasks.filter((x) => x.status === 'done').forEach((x) => write(store.remove(x.id), 'clear the Done column'));
+      tasks.filter((x) => x.done).forEach((x) => write(store.remove(x.id), 'clear completed tasks'));
       render();
       break;
   }
 });
 
-$('#board').addEventListener('submit', (e) => {
+document.addEventListener('change', (e) => {
+  if (e.target.dataset.act !== 'stage') return;
+  const li = e.target.closest('[data-id]');
+  moveTask(tasks.find((x) => x.id === li.dataset.id), e.target.value);
+});
+
+document.addEventListener('submit', (e) => {
+  if (e.target.id !== 'editForm') return;
   e.preventDefault();
   const f = e.target;
   const t = tasks.find((x) => x.id === editingId);
   if (!t) return;
   const patch = {
     title: f.title.value.trim() || t.title, notes: f.notes.value.trim(),
+    stage: STAGES.includes(f.stage.value) ? f.stage.value : t.stage,
     priority: f.priority.value, due: f.due.value || null,
   };
   editingId = null;
@@ -474,22 +610,22 @@ $('#board').addEventListener('submit', (e) => {
   write(store.patch(t.id, patch), 'save your changes');
 });
 
-// Drag cards between columns (mouse and trackpad; on phones use the Start / Done buttons).
+// Drag cards between columns (mouse and trackpad; on phones use Move to).
 let dragId = null;
-const board = $('#board');
-board.addEventListener('dragstart', (e) => {
-  const li = e.target.closest('li.card[draggable=true]');
+const boardEl = $('#boardView');
+boardEl.addEventListener('dragstart', (e) => {
+  const li = e.target.closest && e.target.closest('li.card[draggable=true]');
   if (!li) return;
   dragId = li.dataset.id;
   li.classList.add('dragging');
   e.dataTransfer.effectAllowed = 'move';
   try { e.dataTransfer.setData('text/plain', dragId); } catch {}
 });
-board.addEventListener('dragend', () => {
+boardEl.addEventListener('dragend', () => {
   dragId = null;
   document.querySelectorAll('.dragging, .over').forEach((el) => el.classList.remove('dragging', 'over'));
 });
-board.addEventListener('dragover', (e) => {
+boardEl.addEventListener('dragover', (e) => {
   const ul = e.target.closest('ul.cards');
   if (!ul || !dragId) return;
   e.preventDefault();
@@ -497,16 +633,16 @@ board.addEventListener('dragover', (e) => {
   document.querySelectorAll('ul.cards.over').forEach((x) => x !== ul && x.classList.remove('over'));
   ul.classList.add('over');
 });
-board.addEventListener('dragleave', (e) => {
+boardEl.addEventListener('dragleave', (e) => {
   const ul = e.target.closest('ul.cards');
   if (ul && !ul.contains(e.relatedTarget)) ul.classList.remove('over');
 });
-board.addEventListener('drop', (e) => {
+boardEl.addEventListener('drop', (e) => {
   const ul = e.target.closest('ul.cards');
   if (!ul || !dragId) return;
   e.preventDefault();
   ul.classList.remove('over');
-  moveTask(tasks.find((x) => x.id === dragId), ul.dataset.status);
+  moveTask(tasks.find((x) => x.id === dragId), ul.dataset.stage);
 });
 
 $('#search').addEventListener('input', render);
@@ -526,7 +662,7 @@ $('#importFile').addEventListener('change', async (e) => {
       const id = typeof t.id === 'string' && /^[A-Za-z0-9_.~:@+-]{1,100}$/.test(t.id) && t.id !== '.' && t.id !== '..' ? t.id : newId();
       await write(store.put(id, clean(t)), 'import tasks');
     }
-    say(fresh.length ? `Imported ${fresh.length} task${fresh.length > 1 ? 's' : ''}.` : 'Those tasks are already on your board.');
+    say(fresh.length ? `Imported ${fresh.length} task${fresh.length > 1 ? 's' : ''}.` : 'Those tasks are already here.');
   } catch {
     say('That file isn\'t a Task Notepad export. Choose a .json file made with Export.', true);
   }
@@ -561,7 +697,7 @@ render();
     const btn = $('#exportBtn');
     btn.hidden = false;
     btn.addEventListener('click', async () => {
-      const data = tasks.map(({ id, title, notes, priority, due, status, done, created }) => ({ id, title, notes, priority, due, status, done, created }));
+      const data = tasks.map(({ id, title, notes, priority, due, stage, done, created }) => ({ id, title, notes, priority, due, stage, done, created }));
       const filename = `tasks-${today()}.json`;
       const json = JSON.stringify(data, null, 2);
       if (downloads) {
