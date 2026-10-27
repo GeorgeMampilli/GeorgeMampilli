@@ -9,7 +9,7 @@ Both views show the same tickets. It's one HTML file: open `index.html` in any b
 
 ## Tickets
 
-Each ticket has:
+Press **+ New ticket** above the board to open the form; it closes again once the ticket is created (or with Cancel, × or Esc). Each ticket has:
 
 - **Company name** (the heading) and **Job role** (the subheading)
 - **Interview date**, a **Time** in 24-hour hours and minutes (`HH : MM`), and the **Day** of the week. Picking a date fills in the day, and you can still change it

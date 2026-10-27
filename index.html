@@ -113,7 +113,21 @@
 
   /* ---------- ticket form (new and edit) ---------- */
   .new-ticket { padding: 16px; display: grid; gap: 12px; }
-  .new-ticket > h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; }
+  .new-ticket.closed { padding: 0; background: none; border: 0; box-shadow: none; }
+  .nt-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .nt-head h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; }
+  .new-toggle {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 12px 16px; border: 1.5px dashed var(--line); border-radius: 8px;
+    background: transparent; color: var(--accent); font-weight: 600; font-size: 15px;
+  }
+  .new-toggle:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+  .nt-status { font-size: 13px; color: var(--low); text-align: center; }
+  .nt-status:empty { display: none; }
+  .plus {
+    display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink); font-size: 18px; font-weight: 600; line-height: 1;
+  }
   .ticket-form { display: grid; gap: 12px 18px; grid-template-columns: minmax(0, 1fr); }
   .f { display: grid; gap: 4px; min-width: 0; }
   .f-label { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .02em; }
@@ -291,9 +305,16 @@
       <div class="stats" id="stats"></div>
     </header>
 
-    <section class="new-ticket panel" aria-labelledby="newTicketTitle">
-      <h2 id="newTicketTitle">New ticket</h2>
-      <form class="ticket-form" id="addForm" autocomplete="off" novalidate></form>
+    <section class="new-ticket panel closed" id="newTicket">
+      <button type="button" class="new-toggle" id="newToggle" data-act="new-open" aria-expanded="false" aria-controls="newTicketBody">
+        <span class="plus" aria-hidden="true">+</span>New ticket
+      </button>
+      <div class="nt-status" id="ntStatus" role="status"></div>
+      <div class="new-ticket" id="newTicketBody" style="padding:0" hidden>
+        <div class="nt-head"><h2 id="newTicketTitle">New ticket</h2>
+          <button type="button" class="x" data-act="new-close" aria-label="Close new ticket">×</button></div>
+        <form class="ticket-form" id="addForm" autocomplete="off" novalidate aria-labelledby="newTicketTitle"></form>
+      </div>
     </section>
 
     <div class="toolbar">
@@ -517,7 +538,17 @@ function showFormError(f, res) {
 function resetAddForm(stage) {
   const f = $('#addForm');
   f.innerHTML = formFields('new', { stage }) +
-    `<div class="f-actions"><button class="primary" type="submit">Create ticket</button></div>`;
+    `<div class="f-actions"><button class="primary" type="submit">Create ticket</button><button type="button" data-act="new-close">Cancel</button></div>`;
+}
+// The new-ticket form stays folded behind the "+ New ticket" button until it's needed.
+function setNewTicketOpen(open) {
+  $('#newTicket').classList.toggle('closed', !open);
+  $('#newTicketBody').hidden = !open;
+  $('#newToggle').hidden = open;
+  $('#newToggle').setAttribute('aria-expanded', String(open));
+  $('#ntStatus').textContent = '';
+  if (open) $('#newCompany').focus();
+  else { resetAddForm($('#newStage') ? $('#newStage').value : 'reverts'); $('#newToggle').focus(); }
 }
 
 /* ---------- rendering ---------- */
@@ -581,7 +612,7 @@ function renderBoard() {
           ${t.role ? `<div class="role">${esc(t.role)}</div>` : ''}
           ${whenHtml(t)}
         </li>`).join('')
-      : `<li class="empty">${all.length ? 'No matches here.' : (s === 'reverts' && !tasks.length ? 'Create a ticket above and it lands here.' : 'Drag a ticket here, or open one and use Move to.')}</li>`;
+      : `<li class="empty">${all.length ? 'No matches here.' : (s === 'reverts' && !tasks.length ? 'Press + New ticket above to add one.' : 'Drag a ticket here, or open one and use Move to.')}</li>`;
   }
 }
 
@@ -589,7 +620,7 @@ function renderList() {
   const list = $('#list');
   const items = sorted(tasks.filter((t) => filter === 'all' || (filter === 'done') === t.done).filter(matches));
   if (!items.length) {
-    list.innerHTML = `<li class="empty">${tasks.length ? 'Nothing matches. Try another filter or search.' : 'No tickets yet. Create one above.'}</li>`;
+    list.innerHTML = `<li class="empty">${tasks.length ? 'Nothing matches. Try another filter or search.' : 'No tickets yet. Press + New ticket above to add one.'}</li>`;
     return;
   }
   list.innerHTML = items.map((t) => `
@@ -678,10 +709,12 @@ $('#addForm').addEventListener('submit', async (e) => {
   if (res.error) { showFormError(f, res); return; }
   showFormError(f, null);
   if (!store) return;
-  resetAddForm(res.stage);  // keep adding to the same column
-  $('#newCompany').focus();
+  resetAddForm(res.stage);  // the next ticket starts in the same column
+  setNewTicketOpen(false);
   say('');
-  if (await write(store.put(newId(), { ...res, done: false, created: Date.now() }), 'create that ticket')) say(`Ticket created in ${STAGE_NAME[res.stage]}.`);
+  if (await write(store.put(newId(), { ...res, done: false, created: Date.now() }), 'create that ticket')) {
+    $('#ntStatus').textContent = `Created ${res.company} in ${STAGE_NAME[res.stage]}.`;
+  }
 });
 
 // Time boxes: digits only, and jump to minutes after two hour digits.
@@ -732,6 +765,8 @@ document.addEventListener('click', (e) => {
   switch (el.dataset.act) {
     case 'toggle': write(store.patch(t.id, { done: el.checked }), 'update that ticket'); break;
     case 'close': closeDetail(); break;
+    case 'new-open': setNewTicketOpen(true); break;
+    case 'new-close': setNewTicketOpen(false); break;
     case 'edit': detailMode = 'edit'; confirmingId = null; renderDetail(); break;
     case 'cancel': detailMode = 'view'; renderDetail(); $('#detail .x').focus(); break;
     case 'del': confirmingId = t.id; renderDetail(); break;
@@ -749,6 +784,7 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && openId) { closeDetail(); return; }
+  if (e.key === 'Escape' && !$('#newTicketBody').hidden) { setNewTicketOpen(false); return; }
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-open]')) {
     e.preventDefault();
     openDetail(e.target.dataset.open);

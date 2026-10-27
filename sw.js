@@ -1,6 +1,6 @@
 // Keeps Task Notepad working offline once it has been opened.
 // Bump CACHE when app files change so installed copies pick up the new version.
-const CACHE = 'task-notepad-v5';
+const CACHE = 'task-notepad-v6';
 const APP_FILES = [
   './',
   'index.html',
