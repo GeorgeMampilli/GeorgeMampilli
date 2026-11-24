@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#fbf8e9" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1a2029" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#e9ecef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11151b" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon-64.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -16,18 +16,22 @@
 <style>
   body { margin: 0; }
   [hidden] { display: none !important; }
-  /* Layout: a single legal-pad sheet — ruled rows, a red margin line, the add form pinned at the top of the sheet. */
+  /* Layout: a slim view switcher on the left (Board / List), and the workspace beside it — header,
+     the new-ticket form, toolbar, then either four paper columns of ticket cards or one list.
+     Opening a ticket shows its full details in a panel (a bottom sheet on phones). */
   :root {
     --desk: #e9ecef;
     --paper: #fbf8e9;
-    --rule: #c9d8ea;
-    --margin: #d9625a;
+    --card: #ffffff;
     --ink: #1f2a37;
     --muted: #64707d;
     --accent: #2457c5;
     --accent-ink: #ffffff;
+    --accent-soft: #dfe8fb;
     --field: #ffffff;
     --line: #d6d9d2;
+    --rule: #c9d8ea;
+    --scrim: rgb(17 21 27 / .45);
     --high: #c23a31;
     --med: #b0700c;
     --low: #2f8551;
@@ -37,16 +41,16 @@
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --desk: #11151b; --paper: #1a2029; --rule: #263142; --margin: #9c4a45;
-      --ink: #e7ebf0; --muted: #94a0ae; --accent: #7ea3ff; --accent-ink: #0d1422;
-      --field: #222a35; --line: #313b49; --high: #ff8278; --med: #f0b24a; --low: #6fd093;
+      --desk: #11151b; --paper: #1a2029; --card: #232b36; --ink: #e7ebf0; --muted: #94a0ae;
+      --accent: #7ea3ff; --accent-ink: #0d1422; --accent-soft: #23324d; --field: #222a35; --line: #313b49; --rule: #263142;
+      --scrim: rgb(0 0 0 / .6); --high: #ff8278; --med: #f0b24a; --low: #6fd093;
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --desk: #11151b; --paper: #1a2029; --rule: #263142; --margin: #9c4a45;
-    --ink: #e7ebf0; --muted: #94a0ae; --accent: #7ea3ff; --accent-ink: #0d1422;
-    --field: #222a35; --line: #313b49; --high: #ff8278; --med: #f0b24a; --low: #6fd093;
+    --desk: #11151b; --paper: #1a2029; --card: #232b36; --ink: #e7ebf0; --muted: #94a0ae;
+    --accent: #7ea3ff; --accent-ink: #0d1422; --accent-soft: #23324d; --field: #222a35; --line: #313b49; --rule: #263142;
+    --scrim: rgb(0 0 0 / .6); --high: #ff8278; --med: #f0b24a; --low: #6fd093;
     color-scheme: dark;
   }
 
@@ -61,163 +65,340 @@
   button, input, select, textarea { font: inherit; color: inherit; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .sheet {
-    max-width: 760px; margin: 0 auto;
-    background: var(--paper);
-    border-radius: 6px;
-    box-shadow: 0 1px 2px rgb(0 0 0 / .08), 0 8px 28px rgb(0 0 0 / .08);
-    position: relative; overflow: hidden;
-  }
-  .sheet::before {
-    content: ""; position: absolute; top: 0; bottom: 0; left: 44px;
-    border-left: 1.5px solid var(--margin); opacity: .7; pointer-events: none;
-  }
-  .inner { padding: 22px 20px 20px 60px; display: grid; gap: 18px; }
+  .shell { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 20px; align-items: start; }
 
-  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  /* ---------- view switcher ---------- */
+  .rail {
+    position: sticky; top: max(24px, env(safe-area-inset-top, 0px));
+    display: grid; gap: 6px; padding: 8px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+  }
+  .rail button {
+    display: grid; justify-items: center; gap: 4px; padding: 10px 4px 8px;
+    border: 0; border-radius: 8px; background: transparent; color: var(--muted);
+    font-size: 12px; font-weight: 500; cursor: pointer;
+  }
+  .rail button:hover { color: var(--ink); }
+  .rail button[aria-pressed=true] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .rail svg { width: 24px; height: 24px; }
+
+  .app { display: grid; gap: 18px; min-width: 0; }
+
+  header.top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
   h1 {
     font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.1;
     letter-spacing: -.01em; margin: 0; text-wrap: balance;
   }
-  .stats { display: flex; gap: 14px; font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .stats b { color: var(--ink); font-weight: 500; }
-  .stats .od b { color: var(--high); }
   .sync { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .stats { display: flex; gap: 6px 14px; flex-wrap: wrap; font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stats b { color: var(--ink); font-weight: 500; }
 
-  form.add { display: grid; gap: 8px; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .row > * { min-width: 0; }
-  input[type=text], input[type=date], input[type=search], select, textarea {
-    background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+  .panel {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .05);
   }
-  #newTitle { flex: 1 1 240px; }
-  textarea { width: 100%; resize: vertical; min-height: 40px; }
+  input[type=text], input[type=url], input[type=date], input[type=search], select, textarea {
+    background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0;
+  }
+  textarea { width: 100%; resize: vertical; }
   button {
     background: transparent; border: 1px solid var(--line); border-radius: 6px;
     padding: 7px 12px; cursor: pointer; line-height: 1.2;
   }
-  button:hover { border-color: var(--muted); }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:disabled { opacity: .5; cursor: default; }
   .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
-  .primary:hover { border-color: var(--accent); filter: brightness(1.06); }
-  .danger { color: var(--high); border-color: currentColor; }
+  .primary:hover:not(:disabled) { border-color: var(--accent); filter: brightness(1.06); }
+  .danger { color: var(--high); border-color: currentColor; font-weight: 600; }
+
+  /* ---------- ticket form (new and edit) ---------- */
+  .new-ticket { padding: 16px; display: grid; gap: 12px; }
+  .new-ticket.closed { padding: 0; background: none; border: 0; box-shadow: none; }
+  .nt-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .nt-head h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; }
+  .new-toggle {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 12px 16px; border: 1.5px dashed var(--line); border-radius: 8px;
+    background: transparent; color: var(--accent); font-weight: 600; font-size: 15px;
+  }
+  .new-toggle:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+  .nt-status { font-size: 13px; color: var(--low); text-align: center; }
+  .nt-status:empty { display: none; }
+  .plus {
+    display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink); font-size: 18px; font-weight: 600; line-height: 1;
+  }
+  .ticket-form { display: grid; gap: 12px 18px; grid-template-columns: minmax(0, 1fr); }
+  .f { display: grid; gap: 4px; min-width: 0; }
+  .f-label { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .02em; }
+  .f input, .f select, .f textarea { width: 100%; }
+  .f-company input { font-size: 18px; font-weight: 600; }
+  .time { display: inline-flex; align-items: center; gap: 6px; }
+  .time input {
+    width: 3.4em; text-align: center; font-family: var(--mono); font-variant-numeric: tabular-nums;
+  }
+  .colon { font-family: var(--mono); font-weight: 600; font-size: 18px; color: var(--muted); }
+  .f-hint { font-size: 12px; color: var(--muted); }
+  .f-notes textarea { min-height: 120px; }
+  .link-rows { display: grid; gap: 6px; }
+  .link-row { display: flex; gap: 6px; }
+  .link-row input { flex: 1; min-width: 0; }
+  .link-del { padding: 4px 10px; font-size: 16px; line-height: 1; color: var(--muted); }
+  .link-add { justify-self: start; border: 0; padding: 4px 0; color: var(--accent); font-weight: 600; font-size: 13.5px; }
+  .link-add:hover:not(:disabled) { text-decoration: underline; }
+  .f-actions { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+  .f-actions .primary { padding: 9px 18px; }
+  .form-error { font-size: 13px; color: var(--high); }
+  @media (min-width: 761px) {
+    .ticket-form { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+    .ticket-form .f-company { grid-column: 1; grid-row: 1; }
+    .ticket-form .f-role { grid-column: 1; grid-row: 2; }
+    .ticket-form .f-links { grid-column: 1; grid-row: 3; }
+    .ticket-form .f-notes { grid-column: 1; grid-row: 4 / span 3; display: flex; flex-direction: column; }
+    .ticket-form .f-notes textarea { flex: 1; }
+    .ticket-form .f-date { grid-column: 2; grid-row: 1; }
+    .ticket-form .f-time { grid-column: 2; grid-row: 2; }
+    .ticket-form .f-day { grid-column: 2; grid-row: 3; }
+    .ticket-form .f-stage { grid-column: 2; grid-row: 4; }
+    .ticket-form .f-actions { grid-column: 2; grid-row: 5; }
+    .ticket-form .form-error { grid-column: 2; grid-row: 6; }
+  }
 
   .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .toolbar input[type=search] { flex: 1 1 160px; }
+  .toolbar input[type=search] { flex: 1 1 180px; }
   .tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
   .tabs button { border: 0; border-radius: 0; padding: 7px 12px; }
   .tabs button + button { border-left: 1px solid var(--line); }
   .tabs button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
+  .colnav { display: none; gap: 6px; flex-wrap: wrap; }
+  .colnav button { font-size: 13px; padding: 5px 10px; border-radius: 999px; }
 
-  ul { list-style: none; margin: 0; padding: 0; }
+  /* stage colors: shared by column dots and stage chips */
+  [data-stage=reverts] { --stage: var(--accent); }
+  [data-stage=round1] { --stage: var(--med); }
+  [data-stage=round2] { --stage: var(--low); }
+  [data-stage=rejected] { --stage: var(--high); }
+  .stage-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink); }
+  .stage-chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--stage); }
+
+  /* ---------- board ---------- */
+  .board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  .col { display: flex; flex-direction: column; min-width: 0; }
+  .col-head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 10px; border-bottom: 1px solid var(--line); }
+  .col-head h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 16px; line-height: 1.2; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--stage); flex: none; }
+  .count {
+    margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; font-variant-numeric: tabular-nums;
+  }
+  ul.cards {
+    list-style: none; margin: 0; padding: 10px; display: grid; gap: 8px; align-content: start;
+    min-height: 140px; border-radius: 0 0 8px 8px; transition: background-color .12s;
+  }
+  ul.cards.over { background: var(--accent-soft); }
+
+  li.card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .06); display: grid; gap: 2px; min-width: 0; cursor: pointer;
+  }
+  li.card:hover { border-color: var(--muted); }
+  li.card.dragging { opacity: .45; }
+  .company { font-family: var(--display); font-weight: 600; font-size: 16.5px; line-height: 1.25; overflow-wrap: anywhere; }
+  .role { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+  .when {
+    display: flex; align-items: flex-start; gap: 6px; margin-top: 6px;
+    font-family: var(--mono); font-size: 12px; color: var(--ink); font-variant-numeric: tabular-nums;
+  }
+  .when svg { width: 14px; height: 14px; flex: none; margin-top: 2px; color: var(--muted); }
+  .when.none { color: var(--muted); font-family: var(--body); }
+  .is-done .company { text-decoration: line-through; color: var(--muted); }
+
+  /* ---------- list ---------- */
+  .list-panel { padding: 4px 16px; }
+  ul.list { list-style: none; margin: 0; padding: 0; }
   li.task {
     display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: start;
-    padding: 12px 0; border-bottom: 1px solid var(--rule);
+    padding: 12px 0; border-bottom: 1px solid var(--rule); cursor: pointer;
   }
-  li.task:first-child { border-top: 1px solid var(--rule); }
-  .check { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
-  .t-body { min-width: 0; }
-  .t-title { font-weight: 600; overflow-wrap: anywhere; }
-  li.done .t-title { text-decoration: line-through; color: var(--muted); font-weight: 500; }
-  .t-notes { color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }
-  .meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; font-size: 12px; color: var(--muted); }
-  .pill {
-    font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
-    border: 1px solid currentColor; border-radius: 999px; padding: 0 7px;
-  }
-  .p-high { color: var(--high); } .p-medium { color: var(--med); } .p-low { color: var(--low); }
-  .due { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-  .overdue { color: var(--high); font-weight: 500; }
-  .actions { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
-  .actions button { padding: 4px 9px; font-size: 13px; }
-
-  .edit { padding: 12px 0; border-bottom: 1px solid var(--rule); display: grid; gap: 8px; }
-  .empty { padding: 28px 0; color: var(--muted); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
-  .empty strong { color: var(--ink); display: block; margin-bottom: 2px; }
+  li.task:last-child { border-bottom: 0; }
+  li.task .when { margin-top: 4px; }
+  .check { width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--accent); cursor: pointer; }
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 8px; border: 1px dashed var(--line); border-radius: 7px; cursor: default; }
+  ul.list .empty { border: 0; padding: 28px 0; font-size: 14px; }
 
   footer { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
   .note { font-size: 13px; color: var(--muted); margin-right: auto; }
   .note.err { color: var(--high); }
+  .confirm { font-size: 13px; }
 
-  @media (max-width: 480px) {
-    .sheet::before { left: 22px; }
-    .inner { padding: 18px 14px 16px 34px; }
-    h1 { font-size: 26px; }
+  /* ---------- ticket details ---------- */
+  .scrim {
+    position: fixed; inset: 0; z-index: 20; background: var(--scrim);
+    display: flex; align-items: center; justify-content: center;
+    padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  }
+  .sheet {
+    width: min(640px, 100%); max-height: 100%; overflow: auto;
+    background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: 0 20px 50px rgb(0 0 0 / .25); padding: 18px 20px 20px; display: grid; gap: 14px;
+  }
+  .d-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .x { border: 0; font-size: 22px; line-height: 1; padding: 4px 8px; color: var(--muted); }
+  .d-company { margin: 0; font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1.15; overflow-wrap: anywhere; }
+  .d-role { color: var(--muted); font-size: 16px; margin-top: 2px; overflow-wrap: anywhere; }
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; }
+  .facts div { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+  .facts dt { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .facts dd { margin: 2px 0 0; font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .d-section h3 { margin: 0 0 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 500; }
+  .d-notes { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .d-links { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .d-links li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+  .join {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px;
+    background: var(--accent); color: var(--accent-ink); font-weight: 600; text-decoration: none;
+  }
+  .join:hover { filter: brightness(1.08); }
+  .join svg { width: 14px; height: 14px; }
+  .link-url { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; min-width: 0; flex: 1 1 160px; }
+  .copy { padding: 4px 9px; font-size: 12.5px; }
+  .d-notes.none { color: var(--muted); }
+  .d-meta { font-size: 12px; color: var(--muted); }
+  .d-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-top: 1px solid var(--line); padding-top: 14px; }
+  .d-actions .spacer { flex: 1; }
+  .d-actions label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+  .sheet .ticket-form { grid-template-columns: minmax(0, 1fr); }
+  .sheet .ticket-form > * { grid-column: auto; grid-row: auto; }
+
+  @media (max-width: 1080px) and (min-width: 761px) {
+    .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 760px) {
+    .shell { grid-template-columns: 60px minmax(0, 1fr); gap: 10px; }
+    .rail { padding: 5px; }
+    .rail button { padding: 8px 2px 6px; font-size: 11px; }
+    .rail svg { width: 22px; height: 22px; }
+    h1 { font-size: 24px; }
+    .colnav { display: flex; }
+    .board {
+      grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 88%;
+      overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
+      margin-right: -16px; padding: 0 16px 6px 0;
+    }
+    .col { scroll-snap-align: start; }
+    .list-panel { padding: 4px 12px; }
     li.task { grid-template-columns: 22px 1fr; }
-    .actions { grid-column: 2; justify-content: flex-start; }
+    li.task .stage-chip { grid-column: 2; }
+    .scrim { align-items: flex-end; padding: max(24px, env(safe-area-inset-top, 0px)) 0 0; }
+    .sheet {
+      width: 100%; border-radius: 14px 14px 0 0; border-bottom: 0;
+      padding: 16px max(16px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    }
+    .facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .facts div:first-child { grid-column: 1 / -1; }
   }
-  @media (prefers-reduced-motion: no-preference) {
-    li.task { transition: background-color .15s; }
-  }
+  @media (prefers-reduced-motion: reduce) { ul.cards { transition: none; } }
 </style>
 </head>
 <body>
-<main class="sheet">
-  <div class="inner">
-    <header>
+<div class="shell">
+  <nav class="rail" aria-label="Switch view">
+    <button type="button" data-view="board" aria-pressed="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="9.5" y="4" width="5" height="11" rx="1.5"/><rect x="16" y="4" width="5" height="7" rx="1.5"/></svg>
+      <span>Board</span>
+    </button>
+    <button type="button" data-view="list" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="4" height="4" rx="1"/><path d="M10 6.5h11"/><rect x="3" y="10" width="4" height="4" rx="1"/><path d="M10 12h11"/><rect x="3" y="15.5" width="4" height="4" rx="1"/><path d="M10 17.5h11"/></svg>
+      <span>List</span>
+    </button>
+  </nav>
+
+  <main class="app">
+    <header class="top">
       <div>
         <h1>Task Notepad</h1>
-        <div class="sync" id="sync">Loading your tasks…</div>
+        <div class="sync" id="sync">Loading your tickets…</div>
       </div>
       <div class="stats" id="stats"></div>
     </header>
 
-    <form class="add" id="addForm" autocomplete="off">
-      <div class="row">
-        <input type="text" id="newTitle" placeholder="What needs doing?" required aria-label="Task">
-        <select id="newPriority" aria-label="Priority">
-          <option value="low">Low</option>
-          <option value="medium" selected>Medium</option>
-          <option value="high">High</option>
-        </select>
-        <input type="date" id="newDue" aria-label="Due date">
-        <button class="primary" type="submit">Add task</button>
+    <section class="new-ticket panel closed" id="newTicket">
+      <button type="button" class="new-toggle" id="newToggle" data-act="new-open" aria-expanded="false" aria-controls="newTicketBody">
+        <span class="plus" aria-hidden="true">+</span>New ticket
+      </button>
+      <div class="nt-status" id="ntStatus" role="status"></div>
+      <div class="new-ticket" id="newTicketBody" style="padding:0" hidden>
+        <div class="nt-head"><h2 id="newTicketTitle">New ticket</h2>
+          <button type="button" class="x" data-act="new-close" aria-label="Close new ticket">×</button></div>
+        <form class="ticket-form" id="addForm" autocomplete="off" novalidate aria-labelledby="newTicketTitle"></form>
       </div>
-      <textarea id="newNotes" rows="2" placeholder="Notes (optional)" aria-label="Notes"></textarea>
-    </form>
+    </section>
 
     <div class="toolbar">
-      <div class="tabs" role="group" aria-label="Show">
+      <div class="colnav" id="colnav" role="group" aria-label="Jump to column"></div>
+      <div class="tabs" id="tabs" role="group" aria-label="Show" hidden>
         <button type="button" data-filter="all" aria-pressed="true">All</button>
         <button type="button" data-filter="active" aria-pressed="false">Active</button>
         <button type="button" data-filter="done" aria-pressed="false">Done</button>
       </div>
-      <input type="search" id="search" placeholder="Search tasks" aria-label="Search tasks">
+      <input type="search" id="search" placeholder="Search companies, roles and notes" aria-label="Search">
       <select id="sort" aria-label="Sort">
         <option value="created">Newest first</option>
-        <option value="due">Due date</option>
-        <option value="priority">Priority</option>
+        <option value="date">Interview date</option>
       </select>
     </div>
 
-    <ul id="list"></ul>
+    <div class="board" id="boardView"></div>
+
+    <div class="list-panel panel" id="listView" hidden>
+      <ul class="list" id="list"></ul>
+    </div>
 
     <footer>
       <span class="note" id="note" role="status"></span>
-      <span id="clearWrap"><button type="button" id="clearDone">Clear completed</button></span>
+      <span id="clearWrap"></span>
       <button type="button" id="exportBtn" hidden>Export</button>
       <button type="button" id="importBtn">Import</button>
       <input type="file" id="importFile" accept="application/json,.json" hidden>
     </footer>
-  </div>
-</main>
+  </main>
+</div>
+
+<div class="scrim" id="detail" hidden></div>
 
 <script>
-const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
+const STAGES = ['reverts', 'round1', 'round2', 'rejected'];
+const STAGE_NAME = { reverts: 'Reverts', round1: 'Interview Round 1', round2: 'Interview Round 2', rejected: 'Rejections' };
+const STAGE_SHORT = { reverts: 'reverts', round1: 'round 1', round2: 'round 2', rejected: 'rejections' };
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const LOCAL_KEY = 'task-notepad.v1';
+const VIEW_KEY = 'task-notepad.view';
+const CAL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
+const OUT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
 const $ = (s) => document.querySelector(s);
 
 let tasks = [];
+let view = 'board';
 let filter = 'all';
-let editingId = null;
 let confirmingId = null;
 let store = null;
+let openId = null;       // ticket shown in the details panel
+let detailMode = 'view'; // 'view' or 'edit'
+let lastFocus = null;
+
+try { if (['board', 'list'].includes(localStorage.getItem(VIEW_KEY))) view = localStorage.getItem(VIEW_KEY); } catch {}
 
 function today() {
   const d = new Date();
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
-function fmtDate(iso) {
-  return new Date(iso + 'T00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+function fmtDate(iso, long) {
+  return new Date(iso + 'T00:00').toLocaleDateString(undefined, long
+    ? { month: 'long', day: 'numeric', year: 'numeric' }
+    : { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function dayOf(iso) {
+  return DAYS[(new Date(iso + 'T00:00').getDay() + 6) % 7];
 }
 function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -225,15 +406,53 @@ function esc(s) {
 function newId() {
   return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
+// Meeting links: only web addresses (http/https), so a saved link can never run script when clicked.
+// A link typed without https:// gets it added; anything else is refused.
+function normalizeLink(v) {
+  v = String(v || '').trim();
+  if (!v) return '';
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(v)) v = 'https://' + v;
+  try {
+    const u = new URL(v);
+    return (u.protocol === 'https:' || u.protocol === 'http:') && u.hostname.includes('.') ? u.href : null;
+  } catch { return null; }
+}
+const MEETING_APPS = [
+  [/(^|\.)zoom\.us$/, 'Zoom'], [/^meet\.google\.com$/, 'Google Meet'],
+  [/(^|\.)teams\.(microsoft|live)\.com$/, 'Microsoft Teams'], [/(^|\.)webex\.com$/, 'Webex'],
+  [/(^|\.)gotomeeting\.com$/, 'GoTo Meeting'], [/(^|\.)whereby\.com$/, 'Whereby'], [/(^|\.)slack\.com$/, 'Slack'],
+];
+function linkLabel(href) {
+  const host = new URL(href).hostname.replace(/^www\./, '');
+  const app = MEETING_APPS.find(([re]) => re.test(host));
+  return app ? app[1] : host;
+}
+
+// A ticket: company, role, interview date, time (HH:MM), day, meeting links, notes, board column and a done tick.
+// Tasks saved by earlier versions keep their title as the company and their due date as the date.
 function clean(t) {
+  const date = [t.date, t.due].find((d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '')) || null;
   return {
-    title: String(t.title || '').slice(0, 500),
-    notes: String(t.notes || '').slice(0, 5000),
-    priority: PRIORITY_RANK[t.priority] !== undefined ? t.priority : 'medium',
-    due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || '') ? t.due : null,
-    done: !!t.done,
+    company: String(t.company || t.title || '').slice(0, 300),
+    role: String(t.role || '').slice(0, 300),
+    date,
+    time: /^([01]\d|2[0-3]):[0-5]\d$/.test(t.time || '') ? t.time : '',
+    day: DAYS.includes(t.day) ? t.day : (date && !('day' in t) ? dayOf(date) : ''),
+    links: (Array.isArray(t.links) ? t.links : []).map(normalizeLink).filter(Boolean).slice(0, 10),
+    notes: String(t.notes || '').slice(0, 10000),
+    stage: STAGES.includes(t.stage) ? t.stage : 'reverts',
+    done: !!t.done || t.status === 'done',
     created: Number(t.created) || Date.now(),
   };
+}
+function whenParts(t) {
+  return [t.date ? fmtDate(t.date) : '', t.time, t.day].filter(Boolean);
+}
+function whenHtml(t) {
+  const parts = whenParts(t);
+  return parts.length
+    ? `<div class="when">${CAL_ICON}<span>${parts.map(esc).join(' · ')}</span></div>`
+    : `<div class="when none">No interview date yet</div>`;
 }
 function say(msg, err) {
   const n = $('#note');
@@ -246,10 +465,10 @@ function say(msg, err) {
 function accountStore(db, uid) {
   const col = db.collection('data/users/' + uid);
   const queues = {};
-  // One write at a time per task.
+  // One write at a time per ticket.
   const queued = (id, fn) => (queues[id] = (queues[id] || Promise.resolve()).then(fn, fn));
   return {
-    label: 'Saved to your claude.ai account — open this page on any device to see the same list.',
+    label: 'Saved to your claude.ai account — open this page on any device to see the same tickets.',
     subscribe(cb, onErr) {
       return col.onSnapshot(
         (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
@@ -274,8 +493,8 @@ function browserStore() {
   };
   return {
     label: window.claude
-      ? 'Saved in this browser only. Sign in to claude.ai to keep tasks across devices.'
-      : 'Saved in this browser only. Use Export to back up or move your tasks.',
+      ? 'Saved in this browser only. Sign in to claude.ai to keep tickets across devices.'
+      : 'Saved in this browser only. Use Export to back up or move your tickets.',
     subscribe(cb) { listener = cb; flush(); return () => {}; },
     put: async (id, t) => { data[id] = t; flush(); },
     patch: async (id, p) => { if (data[id]) { Object.assign(data[id], p); flush(); } },
@@ -284,150 +503,430 @@ function browserStore() {
 }
 
 async function write(promise, what) {
-  try { await promise; }
+  try { await promise; return true; }
   catch (e) {
     const code = e && e.code;
-    if (code === 'quota_exceeded') say('Your task list is full. Delete some completed tasks to add more.', true);
+    if (code === 'quota_exceeded') say('You have too many tickets saved. Delete some finished ones to add more.', true);
     else if (code === 'invalid_argument') say(`Couldn't ${what}. You may only have view access to this page.`, true);
     else say(`Couldn't ${what}. Check your connection and try again.`, true);
+    return false;
   }
+}
+
+function moveTask(t, stage) {
+  if (!t || t.stage === stage || !STAGES.includes(stage)) return;
+  write(store.patch(t.id, { stage }), 'move that ticket');
+}
+
+/* ---------- ticket form (used for new tickets and for editing) ---------- */
+
+function formFields(p, t) {
+  const time = (t.time || '').split(':');
+  const dayOpts = ['<option value="">Choose a day</option>']
+    .concat(DAYS.map((d) => `<option value="${d}" ${t.day === d ? 'selected' : ''}>${d}</option>`)).join('');
+  const stageOpts = STAGES.map((s) => `<option value="${s}" ${(t.stage || 'reverts') === s ? 'selected' : ''}>${STAGE_NAME[s]}</option>`).join('');
+  return `
+    <label class="f f-company"><span class="f-label">Company name</span>
+      <input type="text" id="${p}Company" name="company" value="${esc(t.company || '')}" placeholder="e.g. Acme Corp" maxlength="300"></label>
+    <label class="f f-role"><span class="f-label">Job role</span>
+      <input type="text" id="${p}Role" name="role" value="${esc(t.role || '')}" placeholder="e.g. Product Designer" maxlength="300"></label>
+    <label class="f f-date"><span class="f-label">Interview date</span>
+      <input type="date" id="${p}Date" name="date" value="${t.date || ''}"></label>
+    <div class="f f-time"><span class="f-label" id="${p}TimeLabel">Time <span class="f-hint">(24-hour)</span></span>
+      <div class="time" role="group" aria-labelledby="${p}TimeLabel">
+        <input type="text" id="${p}Hour" name="hour" value="${time[0] || ''}" inputmode="numeric" maxlength="2" placeholder="HH" aria-label="Hour" data-hour>
+        <span class="colon" aria-hidden="true">:</span>
+        <input type="text" id="${p}Minute" name="minute" value="${time[1] || ''}" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="Minutes" data-minute>
+      </div></div>
+    <label class="f f-day"><span class="f-label">Day</span>
+      <select id="${p}Day" name="day">${dayOpts}</select></label>
+    <div class="f f-links"><span class="f-label" id="${p}LinksLabel">Meeting links</span>
+      <div class="link-rows" role="group" aria-labelledby="${p}LinksLabel">${((t.links && t.links.length) ? t.links : ['']).map(linkRow).join('')}</div>
+      <button type="button" class="link-add" data-act="link-add">+ Add another link</button></div>
+    <label class="f f-notes"><span class="f-label">Notes</span>
+      <textarea id="${p}Notes" name="notes" rows="5" placeholder="Anything about the role: requirements, who you're meeting, what to prepare">${esc(t.notes || '')}</textarea></label>
+    <label class="f f-stage"><span class="f-label">Column</span>
+      <select id="${p}Stage" name="stage">${stageOpts}</select></label>`;
+}
+
+function linkRow(value) {
+  return `<div class="link-row">
+      <input type="url" name="link" value="${esc(value || '')}" inputmode="url" autocomplete="off" placeholder="Paste a Zoom, Meet or Teams link" aria-label="Meeting link">
+      <button type="button" class="link-del" data-act="link-del" aria-label="Remove this link">×</button>
+    </div>`;
+}
+
+// Reads a ticket form. Returns the fields, or { error } when something needs fixing.
+function readForm(f) {
+  const v = (n) => f.elements.namedItem(n).value.trim();
+  const company = v('company');
+  if (!company) return { error: 'Add the company name.', focus: 'company' };
+  const h = v('hour'), m = v('minute');
+  let time = '';
+  if (h || m) {
+    const hh = Number(h), mm = Number(m || '0');
+    if (!h || !/^\d{1,2}$/.test(h) || hh > 23) return { error: 'Hours go from 00 to 23.', focus: 'hour' };
+    if (!/^\d{0,2}$/.test(m) || mm > 59) return { error: 'Minutes go from 00 to 59.', focus: 'minute' };
+    time = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+  }
+  const links = [];
+  for (const input of f.querySelectorAll('input[name=link]')) {
+    const href = normalizeLink(input.value);
+    if (href === null) return { error: 'That meeting link doesn’t look like a web address. Paste the full link, starting with https://', focusEl: input };
+    if (href && !links.includes(href)) links.push(href);
+  }
+  const date = v('date');
+  return {
+    company, role: v('role'), links: links.slice(0, 10),
+    date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
+    time, day: DAYS.includes(v('day')) ? v('day') : '',
+    notes: f.elements.namedItem('notes').value.trim(),
+    stage: STAGES.includes(v('stage')) ? v('stage') : 'reverts',
+  };
+}
+function showFormError(f, res) {
+  let box = f.querySelector('.form-error');
+  if (!box) { box = document.createElement('div'); box.className = 'form-error'; box.setAttribute('role', 'alert'); f.appendChild(box); }
+  box.textContent = res ? res.error : '';
+  box.hidden = !res;
+  if (res && res.focusEl) res.focusEl.focus();
+  else if (res && res.focus) f.elements.namedItem(res.focus).focus();
+}
+
+function resetAddForm(stage) {
+  const f = $('#addForm');
+  f.innerHTML = formFields('new', { stage }) +
+    `<div class="f-actions"><button class="primary" type="submit">Create ticket</button><button type="button" data-act="new-close">Cancel</button></div>`;
+}
+// The new-ticket form stays folded behind the "+ New ticket" button until it's needed.
+function setNewTicketOpen(open) {
+  $('#newTicket').classList.toggle('closed', !open);
+  $('#newTicketBody').hidden = !open;
+  $('#newToggle').hidden = open;
+  $('#newToggle').setAttribute('aria-expanded', String(open));
+  $('#ntStatus').textContent = '';
+  if (open) $('#newCompany').focus();
+  else { resetAddForm($('#newStage') ? $('#newStage').value : 'reverts'); $('#newToggle').focus(); }
 }
 
 /* ---------- rendering ---------- */
 
-function visible() {
+function matches(t) {
   const q = $('#search').value.trim().toLowerCase();
-  const sort = $('#sort').value;
-  return tasks
-    .filter((t) => filter === 'all' || (filter === 'done') === t.done)
-    .filter((t) => !q || (t.title + ' ' + t.notes).toLowerCase().includes(q))
-    .sort((a, b) => {
-      if (sort === 'due') return (a.due || '9999-99-99').localeCompare(b.due || '9999-99-99') || b.created - a.created;
-      if (sort === 'priority') return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || b.created - a.created;
-      return b.created - a.created;
-    });
+  return !q || (t.company + ' ' + t.role + ' ' + t.notes + ' ' + t.links.join(' ')).toLowerCase().includes(q);
+}
+function sorted(list) {
+  const byDate = $('#sort').value === 'date';
+  return list.sort((a, b) => byDate
+    ? ((a.date || '9999-99-99') + (a.time || '99:99')).localeCompare((b.date || '9999-99-99') + (b.time || '99:99')) || b.created - a.created
+    : b.created - a.created);
 }
 
 function render() {
   const t0 = today();
-  const active = tasks.filter((t) => !t.done).length;
-  const overdue = tasks.filter((t) => !t.done && t.due && t.due < t0).length;
-  $('#stats').innerHTML =
-    `<span><b>${active}</b> active</span><span><b>${tasks.length - active}</b> done</span>` +
-    (overdue ? `<span class="od"><b>${overdue}</b> overdue</span>` : '');
+  document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+  $('#boardView').hidden = view !== 'board';
+  $('#listView').hidden = view !== 'list';
+  $('#tabs').hidden = view !== 'list';
+  $('#colnav').hidden = view !== 'board';
 
-  const doneCount = tasks.length - active;
+  const upcoming = tasks.filter((t) => !t.done && t.date && t.date >= t0).length;
+  const up = `<span><b>${upcoming}</b> upcoming</span>`;
+  if (view === 'board') {
+    $('#stats').innerHTML = STAGES.map((s) => `<span><b>${tasks.filter((t) => t.stage === s).length}</b> ${STAGE_SHORT[s]}</span>`).join('') + up;
+    renderBoard();
+  } else {
+    const active = tasks.filter((t) => !t.done).length;
+    $('#stats').innerHTML = `<span><b>${active}</b> active</span><span><b>${tasks.length - active}</b> done</span>` + up;
+    renderList();
+  }
+
+  const doneCount = tasks.filter((t) => t.done).length;
   $('#clearWrap').innerHTML = confirmingId === '__clear'
-    ? `Remove ${doneCount} completed? <button type="button" class="danger" data-act="clear-yes">Remove</button> <button type="button" data-act="clear-no">Keep</button>`
-    : `<button type="button" id="clearDone" data-act="clear" ${doneCount ? '' : 'disabled'}>Clear completed</button>`;
+    ? `<span class="confirm">Remove ${doneCount} completed ticket${doneCount === 1 ? '' : 's'}?</span> <button type="button" class="danger" data-act="clear-yes">Remove</button> <button type="button" data-act="clear-no">Keep</button>`
+    : `<button type="button" data-act="clear" ${doneCount ? '' : 'disabled'}>Clear completed</button>`;
 
-  const items = visible();
+  renderDetail();
+}
+
+function renderBoard() {
+  const board = $('#boardView');
+  if (!board.children.length) {
+    board.innerHTML = STAGES.map((s) => `
+      <section class="col panel" id="col-${s}" data-stage="${s}">
+        <div class="col-head"><span class="dot"></span><h2>${STAGE_NAME[s]}</h2><span class="count" id="count-${s}">0</span></div>
+        <ul class="cards" data-stage="${s}"></ul>
+      </section>`).join('');
+    $('#colnav').innerHTML = STAGES.map((s) => `<button type="button" data-jump="${s}">${STAGE_NAME[s]}</button>`).join('');
+  }
+  for (const s of STAGES) {
+    const all = tasks.filter((t) => t.stage === s);
+    $('#count-' + s).textContent = all.length;
+    const shown = sorted(all.filter(matches));
+    board.querySelector(`ul.cards[data-stage=${s}]`).innerHTML = shown.length
+      ? shown.map((t) => `
+        <li class="card ${t.done ? 'is-done' : ''}" draggable="true" tabindex="0" data-open="${esc(t.id)}" aria-label="Open ticket: ${esc(t.company)}">
+          <div class="company">${esc(t.company)}</div>
+          ${t.role ? `<div class="role">${esc(t.role)}</div>` : ''}
+          ${whenHtml(t)}
+        </li>`).join('')
+      : `<li class="empty">${all.length ? 'No matches here.' : (s === 'reverts' && !tasks.length ? 'Press + New ticket above to add one.' : 'Drag a ticket here, or open one and use Move to.')}</li>`;
+  }
+}
+
+function renderList() {
   const list = $('#list');
+  const items = sorted(tasks.filter((t) => filter === 'all' || (filter === 'done') === t.done).filter(matches));
   if (!items.length) {
-    list.innerHTML = tasks.length
-      ? `<li class="empty"><strong>Nothing matches.</strong>Try another filter or search.</li>`
-      : `<li class="empty"><strong>No tasks yet.</strong>Type one in the box above and press Add task. Give it a due date and it will turn red once it's overdue.</li>`;
+    list.innerHTML = `<li class="empty">${tasks.length ? 'Nothing matches. Try another filter or search.' : 'No tickets yet. Press + New ticket above to add one.'}</li>`;
     return;
   }
-  list.innerHTML = items.map((t) => (t.id === editingId ? editView(t) : taskView(t, t0))).join('');
-}
-
-function taskView(t, t0) {
-  const late = !t.done && t.due && t.due < t0;
-  const actions = confirmingId === t.id
-    ? `<button type="button" class="danger" data-act="del-yes">Delete</button><button type="button" data-act="del-no">Keep</button>`
-    : `<button type="button" data-act="edit">Edit</button><button type="button" data-act="del" aria-label="Delete task">Delete</button>`;
-  return `
-    <li class="task ${t.done ? 'done' : ''}" data-id="${esc(t.id)}">
-      <input type="checkbox" class="check" data-act="toggle" ${t.done ? 'checked' : ''} aria-label="Mark ${esc(t.title)} done">
-      <div class="t-body">
-        <div class="t-title">${esc(t.title)}</div>
-        ${t.notes ? `<div class="t-notes">${esc(t.notes)}</div>` : ''}
-        <div class="meta">
-          <span class="pill p-${t.priority}">${t.priority}</span>
-          ${t.due ? `<span class="due ${late ? 'overdue' : ''}">Due ${fmtDate(t.due)}${late ? ' · overdue' : ''}</span>` : ''}
-        </div>
+  list.innerHTML = items.map((t) => `
+    <li class="task ${t.done ? 'is-done' : ''}" data-id="${esc(t.id)}" data-open="${esc(t.id)}" tabindex="0" aria-label="Open ticket: ${esc(t.company)}">
+      <input type="checkbox" class="check" data-act="toggle" ${t.done ? 'checked' : ''} aria-label="Mark ${esc(t.company)} done">
+      <div>
+        <div class="company">${esc(t.company)}</div>
+        ${t.role ? `<div class="role">${esc(t.role)}</div>` : ''}
+        ${whenHtml(t)}
       </div>
-      <div class="actions">${actions}</div>
-    </li>`;
+      <span class="stage-chip" data-stage="${t.stage}">${STAGE_NAME[t.stage]}</span>
+    </li>`).join('');
 }
 
-function editView(t) {
-  const opt = (v) => `<option value="${v}" ${t.priority === v ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)}</option>`;
-  return `
-    <li data-id="${esc(t.id)}">
-      <form class="edit" id="editForm">
-        <input type="text" id="editTitle" name="title" value="${esc(t.title)}" required aria-label="Task">
-        <div class="row">
-          <select id="editPriority" name="priority" aria-label="Priority">${opt('low')}${opt('medium')}${opt('high')}</select>
-          <input type="date" id="editDue" name="due" value="${t.due || ''}" aria-label="Due date">
-        </div>
-        <textarea id="editNotes" name="notes" rows="3" aria-label="Notes">${esc(t.notes)}</textarea>
-        <div class="row">
-          <button class="primary" type="submit">Save</button>
-          <button type="button" data-act="cancel">Cancel</button>
-        </div>
-      </form>
-    </li>`;
+function renderDetail() {
+  const box = $('#detail');
+  const t = openId && tasks.find((x) => x.id === openId);
+  if (!t) { if (openId) closeDetail(); box.hidden = true; return; }
+  box.hidden = false;
+  if (detailMode === 'edit') {
+    if (box.querySelector('#editForm')) return; // keep what the viewer is typing
+    box.innerHTML = `
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dHead" data-id="${esc(t.id)}">
+        <div class="d-top"><h2 class="d-company" id="dHead" style="font-size:20px">Edit ticket</h2>
+          <button type="button" class="x" data-act="close" aria-label="Close">×</button></div>
+        <form class="ticket-form" id="editForm" autocomplete="off" novalidate>
+          ${formFields('edit', t)}
+          <div class="f-actions"><button class="primary" type="submit">Save</button><button type="button" data-act="cancel">Cancel</button></div>
+        </form>
+      </div>`;
+    $('#editCompany').focus();
+    return;
+  }
+  const stageOpts = STAGES.map((s) => `<option value="${s}" ${s === t.stage ? 'selected' : ''}>${STAGE_NAME[s]}</option>`).join('');
+  const actions = confirmingId === t.id
+    ? `<span class="confirm">Delete this ticket for good?</span><span class="spacer"></span>
+       <button type="button" class="danger" data-act="del-yes">Delete</button><button type="button" data-act="del-no">Keep</button>`
+    : `<label>Move to <select data-act="stage" aria-label="Move to column">${stageOpts}</select></label>
+       <label><input type="checkbox" class="check" data-act="toggle" ${t.done ? 'checked' : ''}> Done</label>
+       <span class="spacer"></span>
+       <button type="button" data-act="edit">Edit</button><button type="button" data-act="del">Delete</button>`;
+  box.innerHTML = `
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dHead" data-id="${esc(t.id)}">
+      <div class="d-top"><span class="stage-chip" data-stage="${t.stage}">${STAGE_NAME[t.stage]}${t.done ? ' · done' : ''}</span>
+        <button type="button" class="x" data-act="close" aria-label="Close">×</button></div>
+      <div>
+        <h2 class="d-company" id="dHead">${esc(t.company)}</h2>
+        <div class="d-role">${t.role ? esc(t.role) : 'No job role added'}</div>
+      </div>
+      <dl class="facts">
+        <div><dt>Interview date</dt><dd>${t.date ? fmtDate(t.date, true) : '—'}</dd></div>
+        <div><dt>Time</dt><dd>${t.time || '—'}</dd></div>
+        <div><dt>Day</dt><dd>${t.day || '—'}</dd></div>
+      </dl>
+      ${t.date && t.day && dayOf(t.date) !== t.day ? `<div class="d-meta">Heads up: ${fmtDate(t.date, true)} is a ${dayOf(t.date)}.</div>` : ''}
+      <section class="d-section"><h3>Meeting links</h3>
+        ${t.links.length ? `<ul class="d-links">${t.links.map((href) => `
+          <li><a class="join" href="${esc(href)}" target="_blank" rel="noopener noreferrer">Join on ${esc(linkLabel(href))}${OUT_ICON}</a>
+            <span class="link-url">${esc(href.replace(/^https?:\/\//, ''))}</span>
+            <button type="button" class="copy" data-act="link-copy" data-url="${esc(href)}">Copy</button></li>`).join('')}</ul>`
+          : `<p class="d-notes none">No meeting links yet. Use Edit to add one.</p>`}</section>
+      <section class="d-section"><h3>Notes</h3>
+        <p class="d-notes ${t.notes ? '' : 'none'}">${t.notes ? esc(t.notes) : 'No notes yet. Use Edit to add some.'}</p></section>
+      ${t.created > 1.6e12 ? `<div class="d-meta">Created ${new Date(t.created).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>` : ''}
+      <div class="d-actions">${actions}</div>
+    </div>`;
+}
+
+function openDetail(id) {
+  lastFocus = document.activeElement;
+  openId = id; detailMode = 'view'; confirmingId = null;
+  renderDetail();
+  const x = $('#detail .x');
+  if (x) x.focus();
+}
+function closeDetail() {
+  openId = null; detailMode = 'view';
+  if (confirmingId && confirmingId !== '__clear') confirmingId = null;
+  const box = $('#detail');
+  box.hidden = true; box.innerHTML = '';
+  const back = lastFocus && lastFocus.dataset && lastFocus.dataset.open && document.querySelector(`[data-open="${CSS.escape(lastFocus.dataset.open)}"]`);
+  if (back) back.focus();
+  lastFocus = null;
 }
 
 /* ---------- interactions ---------- */
 
-$('#addForm').addEventListener('submit', (e) => {
+$('#addForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const title = $('#newTitle').value.trim();
-  if (!title || !store) return;
-  const t = clean({
-    title, notes: $('#newNotes').value.trim(), priority: $('#newPriority').value,
-    due: $('#newDue').value, done: false, created: Date.now(),
-  });
-  e.target.reset();
-  $('#newTitle').focus();
+  const f = e.target;
+  const res = readForm(f);
+  if (res.error) { showFormError(f, res); return; }
+  showFormError(f, null);
+  if (!store) return;
+  resetAddForm(res.stage);  // the next ticket starts in the same column
+  setNewTicketOpen(false);
   say('');
-  write(store.put(newId(), t), 'add that task');
+  if (await write(store.put(newId(), { ...res, done: false, created: Date.now() }), 'create that ticket')) {
+    $('#ntStatus').textContent = `Created ${res.company} in ${STAGE_NAME[res.stage]}.`;
+  }
+});
+
+// Time boxes: digits only, and jump to minutes after two hour digits.
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (el.matches('[data-hour], [data-minute]')) {
+    el.value = el.value.replace(/\D/g, '').slice(0, 2);
+    if (el.matches('[data-hour]') && el.value.length === 2) el.form.elements.namedItem('minute').focus();
+  }
+});
+document.addEventListener('change', (e) => {
+  const el = e.target;
+  // Picking a date fills in its day of the week; you can still change the day.
+  if (el.name === 'date' && el.form && el.value) el.form.elements.namedItem('day').value = dayOf(el.value);
+  if (el.dataset.act === 'stage') {
+    const holder = el.closest('[data-id]');
+    moveTask(tasks.find((x) => x.id === holder.dataset.id), el.value);
+  }
 });
 
 document.addEventListener('click', (e) => {
-  const act = e.target.dataset && e.target.dataset.act;
-  if (!act) return;
-  const li = e.target.closest('[data-id]');
-  const t = li && tasks.find((x) => x.id === li.dataset.id);
-  switch (act) {
-    case 'toggle': write(store.patch(t.id, { done: e.target.checked }), 'update that task'); break;
-    case 'edit': editingId = t.id; confirmingId = null; render(); $('#editTitle').focus(); break;
-    case 'cancel': editingId = null; render(); break;
-    case 'del': confirmingId = t.id; render(); break;
-    case 'del-no': confirmingId = null; render(); break;
-    case 'del-yes': confirmingId = null; write(store.remove(t.id), 'delete that task'); break;
+  if (e.target.id === 'detail') { closeDetail(); return; }  // click outside the panel
+  const el = e.target.closest('[data-act], [data-jump], [data-view], [data-filter]');
+  if (!el) {
+    const opener = e.target.closest('[data-open]');
+    if (opener) openDetail(opener.dataset.open);
+    return;
+  }
+  if (el.dataset.view) {
+    view = el.dataset.view;
+    confirmingId = null;
+    try { localStorage.setItem(VIEW_KEY, view); } catch {}
+    render();
+    return;
+  }
+  if (el.dataset.filter) {
+    filter = el.dataset.filter;
+    document.querySelectorAll('[data-filter]').forEach((x) => x.setAttribute('aria-pressed', String(x === el)));
+    render();
+    return;
+  }
+  if (el.dataset.jump) {
+    $('#col-' + el.dataset.jump).scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    return;
+  }
+  const holder = el.closest('[data-id]');
+  const t = holder && tasks.find((x) => x.id === holder.dataset.id);
+  switch (el.dataset.act) {
+    case 'toggle': write(store.patch(t.id, { done: el.checked }), 'update that ticket'); break;
+    case 'close': closeDetail(); break;
+    case 'link-add': {
+      const rows = el.closest('.f-links').querySelector('.link-rows');
+      if (rows.children.length >= 10) break;
+      rows.insertAdjacentHTML('beforeend', linkRow(''));
+      rows.lastElementChild.querySelector('input').focus();
+      break;
+    }
+    case 'link-del': {
+      const row = el.closest('.link-row');
+      if (row.parentElement.children.length > 1) row.remove();
+      else { row.querySelector('input').value = ''; row.querySelector('input').focus(); }
+      break;
+    }
+    case 'link-copy': {
+      const done = () => { el.textContent = 'Copied'; setTimeout(() => { el.textContent = 'Copy'; }, 1500); };
+      const fallback = () => {
+        const sel = getSelection(), range = document.createRange();
+        range.selectNodeContents(el.previousElementSibling);
+        sel.removeAllRanges(); sel.addRange(range);
+        el.textContent = 'Selected — copy it';
+      };
+      try { navigator.clipboard.writeText(el.dataset.url).then(done, fallback); } catch { fallback(); }
+      break;
+    }
+    case 'new-open': setNewTicketOpen(true); break;
+    case 'new-close': setNewTicketOpen(false); break;
+    case 'edit': detailMode = 'edit'; confirmingId = null; renderDetail(); break;
+    case 'cancel': detailMode = 'view'; renderDetail(); $('#detail .x').focus(); break;
+    case 'del': confirmingId = t.id; renderDetail(); break;
+    case 'del-no': confirmingId = null; renderDetail(); break;
+    case 'del-yes': confirmingId = null; closeDetail(); write(store.remove(t.id), 'delete that ticket'); break;
     case 'clear': confirmingId = '__clear'; render(); break;
     case 'clear-no': confirmingId = null; render(); break;
     case 'clear-yes':
       confirmingId = null;
-      tasks.filter((x) => x.done).forEach((x) => write(store.remove(x.id), 'clear completed tasks'));
+      tasks.filter((x) => x.done).forEach((x) => write(store.remove(x.id), 'clear completed tickets'));
       render();
       break;
   }
 });
 
-$('#list').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const f = e.target;
-  const t = tasks.find((x) => x.id === editingId);
-  if (!t) return;
-  const patch = {
-    title: f.title.value.trim() || t.title, notes: f.notes.value.trim(),
-    priority: f.priority.value, due: f.due.value || null,
-  };
-  editingId = null;
-  render();
-  write(store.patch(t.id, patch), 'save your changes');
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && openId) { closeDetail(); return; }
+  if (e.key === 'Escape' && !$('#newTicketBody').hidden) { setNewTicketOpen(false); return; }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-open]')) {
+    e.preventDefault();
+    openDetail(e.target.dataset.open);
+  }
 });
 
-document.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => {
-  filter = b.dataset.filter;
-  document.querySelectorAll('[data-filter]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-  render();
-}));
+document.addEventListener('submit', (e) => {
+  if (e.target.id !== 'editForm') return;
+  e.preventDefault();
+  const f = e.target;
+  const res = readForm(f);
+  if (res.error) { showFormError(f, res); return; }
+  const id = openId;
+  detailMode = 'view';
+  write(store.patch(id, res), 'save your changes');
+  renderDetail();
+  $('#detail .x') && $('#detail .x').focus();
+});
+
+// Drag tickets between columns (mouse and trackpad; on phones open a ticket and use Move to).
+let dragId = null;
+const boardEl = $('#boardView');
+boardEl.addEventListener('dragstart', (e) => {
+  const li = e.target.closest && e.target.closest('li.card');
+  if (!li) return;
+  dragId = li.dataset.open;
+  li.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', dragId); } catch {}
+});
+boardEl.addEventListener('dragend', () => {
+  dragId = null;
+  document.querySelectorAll('.dragging, .over').forEach((el) => el.classList.remove('dragging', 'over'));
+});
+boardEl.addEventListener('dragover', (e) => {
+  const ul = e.target.closest('ul.cards');
+  if (!ul || !dragId) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('ul.cards.over').forEach((x) => x !== ul && x.classList.remove('over'));
+  ul.classList.add('over');
+});
+boardEl.addEventListener('dragleave', (e) => {
+  const ul = e.target.closest('ul.cards');
+  if (ul && !ul.contains(e.relatedTarget)) ul.classList.remove('over');
+});
+boardEl.addEventListener('drop', (e) => {
+  const ul = e.target.closest('ul.cards');
+  if (!ul || !dragId) return;
+  e.preventDefault();
+  ul.classList.remove('over');
+  moveTask(tasks.find((x) => x.id === dragId), ul.dataset.stage);
+});
+
 $('#search').addEventListener('input', render);
 $('#sort').addEventListener('change', render);
 
@@ -440,12 +939,12 @@ $('#importFile').addEventListener('change', async (e) => {
     const data = JSON.parse(await file.text());
     if (!Array.isArray(data)) throw new Error('not a list');
     const have = new Set(tasks.map((t) => t.id));
-    const fresh = data.filter((t) => t && t.title && !have.has(t.id));
+    const fresh = data.filter((t) => t && (t.company || t.title) && !have.has(t.id));
     for (const t of fresh) {
       const id = typeof t.id === 'string' && /^[A-Za-z0-9_.~:@+-]{1,100}$/.test(t.id) && t.id !== '.' && t.id !== '..' ? t.id : newId();
-      await write(store.put(id, clean(t)), 'import tasks');
+      await write(store.put(id, clean(t)), 'import tickets');
     }
-    say(fresh.length ? `Imported ${fresh.length} task${fresh.length > 1 ? 's' : ''}.` : 'Those tasks are already in your list.');
+    say(fresh.length ? `Imported ${fresh.length} ticket${fresh.length > 1 ? 's' : ''}.` : 'Those tickets are already here.');
   } catch {
     say('That file isn\'t a Task Notepad export. Choose a .json file made with Export.', true);
   }
@@ -459,13 +958,13 @@ function start(s) {
   s.subscribe(
     (rows) => {
       tasks = rows.map((r) => ({ id: r.id, ...clean(r) }));
-      if (editingId && !tasks.some((t) => t.id === editingId)) editingId = null;
       render();
     },
-    () => say('Lost the connection to your saved tasks. Reload the page to reconnect.', true),
+    () => say('Lost the connection to your saved tickets. Reload the page to reconnect.', true),
   );
 }
 
+resetAddForm('reverts');
 render();
 (async () => {
   const cl = window.claude;
@@ -480,8 +979,8 @@ render();
     const btn = $('#exportBtn');
     btn.hidden = false;
     btn.addEventListener('click', async () => {
-      const data = tasks.map(({ id, title, notes, priority, due, done, created }) => ({ id, title, notes, priority, due, done, created }));
-      const filename = `tasks-${today()}.json`;
+      const data = tasks.map(({ id, company, role, date, time, day, links, notes, stage, done, created }) => ({ id, company, role, date, time, day, links, notes, stage, done, created }));
+      const filename = `tickets-${today()}.json`;
       const json = JSON.stringify(data, null, 2);
       if (downloads) {
         try { await downloads.save({ filename, data: json }); } catch { /* the viewer declined the save */ }
