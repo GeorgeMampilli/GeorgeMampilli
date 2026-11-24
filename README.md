@@ -13,6 +13,7 @@ Press **+ New ticket** above the board to open the form; it closes again once th
 
 - **Company name** (the heading) and **Job role** (the subheading)
 - **Interview date**, a **Time** in 24-hour hours and minutes (`HH : MM`), and the **Day** of the week. Picking a date fills in the day, and you can still change it
+- **Meeting links**: paste one or more Zoom, Google Meet, Teams or other meeting links (**+ Add another link** adds a row). The open ticket shows a **Join** button for each, plus **Copy**
 - **Notes** about the role
 - The **Column** it sits in
 

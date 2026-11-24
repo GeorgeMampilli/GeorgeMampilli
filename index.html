@@ -97,7 +97,7 @@
     background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
     box-shadow: 0 1px 2px rgb(0 0 0 / .05);
   }
-  input[type=text], input[type=date], input[type=search], select, textarea {
+  input[type=text], input[type=url], input[type=date], input[type=search], select, textarea {
     background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0;
   }
   textarea { width: 100%; resize: vertical; }
@@ -140,6 +140,12 @@
   .colon { font-family: var(--mono); font-weight: 600; font-size: 18px; color: var(--muted); }
   .f-hint { font-size: 12px; color: var(--muted); }
   .f-notes textarea { min-height: 120px; }
+  .link-rows { display: grid; gap: 6px; }
+  .link-row { display: flex; gap: 6px; }
+  .link-row input { flex: 1; min-width: 0; }
+  .link-del { padding: 4px 10px; font-size: 16px; line-height: 1; color: var(--muted); }
+  .link-add { justify-self: start; border: 0; padding: 4px 0; color: var(--accent); font-weight: 600; font-size: 13.5px; }
+  .link-add:hover:not(:disabled) { text-decoration: underline; }
   .f-actions { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
   .f-actions .primary { padding: 9px 18px; }
   .form-error { font-size: 13px; color: var(--high); }
@@ -147,7 +153,8 @@
     .ticket-form { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
     .ticket-form .f-company { grid-column: 1; grid-row: 1; }
     .ticket-form .f-role { grid-column: 1; grid-row: 2; }
-    .ticket-form .f-notes { grid-column: 1; grid-row: 3 / span 4; display: flex; flex-direction: column; }
+    .ticket-form .f-links { grid-column: 1; grid-row: 3; }
+    .ticket-form .f-notes { grid-column: 1; grid-row: 4 / span 3; display: flex; flex-direction: column; }
     .ticket-form .f-notes textarea { flex: 1; }
     .ticket-form .f-date { grid-column: 2; grid-row: 1; }
     .ticket-form .f-time { grid-column: 2; grid-row: 2; }
@@ -245,6 +252,16 @@
   .facts dd { margin: 2px 0 0; font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   .d-section h3 { margin: 0 0 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 500; }
   .d-notes { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .d-links { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .d-links li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+  .join {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px;
+    background: var(--accent); color: var(--accent-ink); font-weight: 600; text-decoration: none;
+  }
+  .join:hover { filter: brightness(1.08); }
+  .join svg { width: 14px; height: 14px; }
+  .link-url { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; min-width: 0; flex: 1 1 160px; }
+  .copy { padding: 4px 9px; font-size: 12.5px; }
   .d-notes.none { color: var(--muted); }
   .d-meta { font-size: 12px; color: var(--muted); }
   .d-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-top: 1px solid var(--line); padding-top: 14px; }
@@ -357,6 +374,7 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 const LOCAL_KEY = 'task-notepad.v1';
 const VIEW_KEY = 'task-notepad.view';
 const CAL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
+const OUT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
 const $ = (s) => document.querySelector(s);
 
 let tasks = [];
@@ -388,7 +406,29 @@ function esc(s) {
 function newId() {
   return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
-// A ticket: company, role, interview date, time (HH:MM), day, notes, board column and a done tick.
+// Meeting links: only web addresses (http/https), so a saved link can never run script when clicked.
+// A link typed without https:// gets it added; anything else is refused.
+function normalizeLink(v) {
+  v = String(v || '').trim();
+  if (!v) return '';
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(v)) v = 'https://' + v;
+  try {
+    const u = new URL(v);
+    return (u.protocol === 'https:' || u.protocol === 'http:') && u.hostname.includes('.') ? u.href : null;
+  } catch { return null; }
+}
+const MEETING_APPS = [
+  [/(^|\.)zoom\.us$/, 'Zoom'], [/^meet\.google\.com$/, 'Google Meet'],
+  [/(^|\.)teams\.(microsoft|live)\.com$/, 'Microsoft Teams'], [/(^|\.)webex\.com$/, 'Webex'],
+  [/(^|\.)gotomeeting\.com$/, 'GoTo Meeting'], [/(^|\.)whereby\.com$/, 'Whereby'], [/(^|\.)slack\.com$/, 'Slack'],
+];
+function linkLabel(href) {
+  const host = new URL(href).hostname.replace(/^www\./, '');
+  const app = MEETING_APPS.find(([re]) => re.test(host));
+  return app ? app[1] : host;
+}
+
+// A ticket: company, role, interview date, time (HH:MM), day, meeting links, notes, board column and a done tick.
 // Tasks saved by earlier versions keep their title as the company and their due date as the date.
 function clean(t) {
   const date = [t.date, t.due].find((d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '')) || null;
@@ -398,6 +438,7 @@ function clean(t) {
     date,
     time: /^([01]\d|2[0-3]):[0-5]\d$/.test(t.time || '') ? t.time : '',
     day: DAYS.includes(t.day) ? t.day : (date && !('day' in t) ? dayOf(date) : ''),
+    links: (Array.isArray(t.links) ? t.links : []).map(normalizeLink).filter(Boolean).slice(0, 10),
     notes: String(t.notes || '').slice(0, 10000),
     stage: STAGES.includes(t.stage) ? t.stage : 'reverts',
     done: !!t.done || t.status === 'done',
@@ -499,10 +540,20 @@ function formFields(p, t) {
       </div></div>
     <label class="f f-day"><span class="f-label">Day</span>
       <select id="${p}Day" name="day">${dayOpts}</select></label>
+    <div class="f f-links"><span class="f-label" id="${p}LinksLabel">Meeting links</span>
+      <div class="link-rows" role="group" aria-labelledby="${p}LinksLabel">${((t.links && t.links.length) ? t.links : ['']).map(linkRow).join('')}</div>
+      <button type="button" class="link-add" data-act="link-add">+ Add another link</button></div>
     <label class="f f-notes"><span class="f-label">Notes</span>
       <textarea id="${p}Notes" name="notes" rows="5" placeholder="Anything about the role: requirements, who you're meeting, what to prepare">${esc(t.notes || '')}</textarea></label>
     <label class="f f-stage"><span class="f-label">Column</span>
       <select id="${p}Stage" name="stage">${stageOpts}</select></label>`;
+}
+
+function linkRow(value) {
+  return `<div class="link-row">
+      <input type="url" name="link" value="${esc(value || '')}" inputmode="url" autocomplete="off" placeholder="Paste a Zoom, Meet or Teams link" aria-label="Meeting link">
+      <button type="button" class="link-del" data-act="link-del" aria-label="Remove this link">×</button>
+    </div>`;
 }
 
 // Reads a ticket form. Returns the fields, or { error } when something needs fixing.
@@ -518,9 +569,15 @@ function readForm(f) {
     if (!/^\d{0,2}$/.test(m) || mm > 59) return { error: 'Minutes go from 00 to 59.', focus: 'minute' };
     time = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
   }
+  const links = [];
+  for (const input of f.querySelectorAll('input[name=link]')) {
+    const href = normalizeLink(input.value);
+    if (href === null) return { error: 'That meeting link doesn’t look like a web address. Paste the full link, starting with https://', focusEl: input };
+    if (href && !links.includes(href)) links.push(href);
+  }
   const date = v('date');
   return {
-    company, role: v('role'),
+    company, role: v('role'), links: links.slice(0, 10),
     date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
     time, day: DAYS.includes(v('day')) ? v('day') : '',
     notes: f.elements.namedItem('notes').value.trim(),
@@ -532,7 +589,8 @@ function showFormError(f, res) {
   if (!box) { box = document.createElement('div'); box.className = 'form-error'; box.setAttribute('role', 'alert'); f.appendChild(box); }
   box.textContent = res ? res.error : '';
   box.hidden = !res;
-  if (res && res.focus) f.elements.namedItem(res.focus).focus();
+  if (res && res.focusEl) res.focusEl.focus();
+  else if (res && res.focus) f.elements.namedItem(res.focus).focus();
 }
 
 function resetAddForm(stage) {
@@ -555,7 +613,7 @@ function setNewTicketOpen(open) {
 
 function matches(t) {
   const q = $('#search').value.trim().toLowerCase();
-  return !q || (t.company + ' ' + t.role + ' ' + t.notes).toLowerCase().includes(q);
+  return !q || (t.company + ' ' + t.role + ' ' + t.notes + ' ' + t.links.join(' ')).toLowerCase().includes(q);
 }
 function sorted(list) {
   const byDate = $('#sort').value === 'date';
@@ -676,6 +734,12 @@ function renderDetail() {
         <div><dt>Day</dt><dd>${t.day || '—'}</dd></div>
       </dl>
       ${t.date && t.day && dayOf(t.date) !== t.day ? `<div class="d-meta">Heads up: ${fmtDate(t.date, true)} is a ${dayOf(t.date)}.</div>` : ''}
+      <section class="d-section"><h3>Meeting links</h3>
+        ${t.links.length ? `<ul class="d-links">${t.links.map((href) => `
+          <li><a class="join" href="${esc(href)}" target="_blank" rel="noopener noreferrer">Join on ${esc(linkLabel(href))}${OUT_ICON}</a>
+            <span class="link-url">${esc(href.replace(/^https?:\/\//, ''))}</span>
+            <button type="button" class="copy" data-act="link-copy" data-url="${esc(href)}">Copy</button></li>`).join('')}</ul>`
+          : `<p class="d-notes none">No meeting links yet. Use Edit to add one.</p>`}</section>
       <section class="d-section"><h3>Notes</h3>
         <p class="d-notes ${t.notes ? '' : 'none'}">${t.notes ? esc(t.notes) : 'No notes yet. Use Edit to add some.'}</p></section>
       ${t.created > 1.6e12 ? `<div class="d-meta">Created ${new Date(t.created).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>` : ''}
@@ -765,6 +829,30 @@ document.addEventListener('click', (e) => {
   switch (el.dataset.act) {
     case 'toggle': write(store.patch(t.id, { done: el.checked }), 'update that ticket'); break;
     case 'close': closeDetail(); break;
+    case 'link-add': {
+      const rows = el.closest('.f-links').querySelector('.link-rows');
+      if (rows.children.length >= 10) break;
+      rows.insertAdjacentHTML('beforeend', linkRow(''));
+      rows.lastElementChild.querySelector('input').focus();
+      break;
+    }
+    case 'link-del': {
+      const row = el.closest('.link-row');
+      if (row.parentElement.children.length > 1) row.remove();
+      else { row.querySelector('input').value = ''; row.querySelector('input').focus(); }
+      break;
+    }
+    case 'link-copy': {
+      const done = () => { el.textContent = 'Copied'; setTimeout(() => { el.textContent = 'Copy'; }, 1500); };
+      const fallback = () => {
+        const sel = getSelection(), range = document.createRange();
+        range.selectNodeContents(el.previousElementSibling);
+        sel.removeAllRanges(); sel.addRange(range);
+        el.textContent = 'Selected — copy it';
+      };
+      try { navigator.clipboard.writeText(el.dataset.url).then(done, fallback); } catch { fallback(); }
+      break;
+    }
     case 'new-open': setNewTicketOpen(true); break;
     case 'new-close': setNewTicketOpen(false); break;
     case 'edit': detailMode = 'edit'; confirmingId = null; renderDetail(); break;
@@ -891,7 +979,7 @@ render();
     const btn = $('#exportBtn');
     btn.hidden = false;
     btn.addEventListener('click', async () => {
-      const data = tasks.map(({ id, company, role, date, time, day, notes, stage, done, created }) => ({ id, company, role, date, time, day, notes, stage, done, created }));
+      const data = tasks.map(({ id, company, role, date, time, day, links, notes, stage, done, created }) => ({ id, company, role, date, time, day, links, notes, stage, done, created }));
       const filename = `tickets-${today()}.json`;
       const json = JSON.stringify(data, null, 2);
       if (downloads) {
